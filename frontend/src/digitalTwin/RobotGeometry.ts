@@ -46,6 +46,65 @@ export interface SprayParticleRefs {
   count: number;
 }
 
+export interface ValveRefs {
+  group: THREE.Group;
+  indicatorMesh: THREE.Mesh;
+  indicatorMat: THREE.MeshBasicMaterial;
+  state: 'CLOSED' | 'OPEN';
+}
+
+export interface TankRefs {
+  group: THREE.Group;
+  bottleMesh: THREE.Mesh;
+  liquidMesh: THREE.Mesh;
+  liquidMat: THREE.MeshStandardMaterial;
+  labelMesh: THREE.Mesh;
+  baseY: number;
+  fullHeight: number;
+}
+
+export interface PipeRefs {
+  outerTubeMesh: THREE.Mesh;
+  fluidCoreMesh: THREE.Mesh;
+  fluidCoreMat: THREE.MeshStandardMaterial;
+  flowTexture: THREE.CanvasTexture;
+  isActive: boolean;
+}
+
+export interface TreatmentPlumbingRefs {
+  tanks: {
+    1: TankRefs;
+    2: TankRefs;
+    3: TankRefs;
+  };
+  valves: {
+    1: ValveRefs;
+    2: ValveRefs;
+    3: ValveRefs;
+  };
+  pump: {
+    group: THREE.Group;
+    ledMesh: THREE.Mesh;
+    ledMat: THREE.MeshBasicMaterial;
+    state: 'OFF' | 'ON';
+  };
+  pipes: {
+    1: PipeRefs;
+    2: PipeRefs;
+    3: PipeRefs;
+  };
+  nozzles: {
+    1: THREE.Mesh;
+    2: THREE.Mesh;
+    3: THREE.Mesh;
+  };
+  setTankLevel: (tankNum: 1 | 2 | 3, pct: number) => void;
+  setValveState: (valveNum: 1 | 2 | 3, state: 'OPEN' | 'CLOSED') => void;
+  setPumpState: (state: 'OFF' | 'ON') => void;
+  setPipeFlow: (pipeNum: 1 | 2 | 3, active: boolean) => void;
+  updateFlowAnimation: (deltaSec: number) => void;
+}
+
 export interface RobotModelRefs {
   rootGroup: THREE.Group;
   chassisGroup: THREE.Group;
@@ -60,6 +119,7 @@ export interface RobotModelRefs {
   statusLedMaterial: THREE.MeshBasicMaterial;
   sprayNozzleMesh: THREE.Mesh;
   tankLiquidMesh: THREE.Mesh;
+  plumbing: TreatmentPlumbingRefs;
 }
 
 export function createAgriGuardRobot(): RobotModelRefs {
@@ -875,63 +935,375 @@ export function createAgriGuardRobot(): RobotModelRefs {
   );
 
   // ───────────────────────────────────────────────────────────────────────────
-  // 6. Suspended Spray Reservoir Bottle & Under-Chassis Sprayer (Photo 2)
+  // 6. Multi-Tank Precision Treatment Delivery System (Real Hardware Architecture)
+  //    - Tank 1: Treatment A (Copper Hydroxide)
+  //    - Tank 2: Treatment B (Organic Bio-Neem)
+  //    - Tank 3: Treatment C (Clean Rinsing & Mineral)
+  //    - 3 Solenoid Valves with OPEN/CLOSED status indicators
+  //    - 12V Diaphragm Pump & 3-Way Manifold Block
+  //    - 3 Routed Vinyl Pipes with Animated Liquid Flow Cores
+  //    - 3 Brass Atomizing Cone Nozzles
   // ───────────────────────────────────────────────────────────────────────────
-  const bottleY = 0.85;
-  const bottleZ = -0.35;
-  const bottleRadius = 0.22;
-  const bottleHeight = 0.65;
+  const bottleY = 0.82;
+  const bottleZ = -0.32;
+  const tankRadius = 0.105;
+  const tankHeight = 0.48;
 
-  // Clear Translucent PET Bottle (matching the water bottle under robot in Photo 2)
-  const bottleGeom = new THREE.CylinderGeometry(bottleRadius, bottleRadius, bottleHeight, 18);
+  function createTankBadgeTexture(tankLabel: string, trtLabel: string, colorHexStr: string): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#060d17';
+      ctx.fillRect(0, 0, 256, 128);
+      ctx.strokeStyle = colorHexStr;
+      ctx.lineWidth = 6;
+      ctx.strokeRect(4, 4, 248, 120);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 36px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(tankLabel, 128, 50);
+
+      ctx.fillStyle = colorHexStr;
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText(trtLabel, 128, 96);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.needsUpdate = true;
+    return tex;
+  }
+
+  function createPipeFlowTexture(fluidColor: string): THREE.CanvasTexture {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const grad = ctx.createLinearGradient(0, 0, 512, 0);
+      grad.addColorStop(0, fluidColor);
+      grad.addColorStop(0.3, 'rgba(255, 255, 255, 0.85)');
+      grad.addColorStop(0.5, fluidColor);
+      grad.addColorStop(0.8, 'rgba(255, 255, 255, 0.7)');
+      grad.addColorStop(1, fluidColor);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 512, 64);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      for (let i = 0; i < 20; i++) {
+        const bx = (i * 26) % 512;
+        const by = 20 + Math.sin(i) * 12;
+        ctx.beginPath();
+        ctx.arc(bx, by, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 1);
+    return tex;
+  }
+
+  const tankConfigs = [
+    { num: 1 as const, x: -0.26, label: 'TANK 1', trt: 'TRT-A', colorHex: 0x06b6d4, colorCss: '#06b6d4', initialLevel: 68 },
+    { num: 2 as const, x:  0.00, label: 'TANK 2', trt: 'TRT-B', colorHex: 0x10b981, colorCss: '#10b981', initialLevel: 42 },
+    { num: 3 as const, x:  0.26, label: 'TANK 3', trt: 'TRT-C', colorHex: 0x38bdf8, colorCss: '#38bdf8', initialLevel: 0 },
+  ];
+
+  const bottleGeom = new THREE.CylinderGeometry(tankRadius, tankRadius, tankHeight, 16);
   const bottleMat = new THREE.MeshPhysicalMaterial({
     color: 0xf8fafc,
     transparent: true,
-    opacity: 0.45,
+    opacity: 0.42,
     roughness: 0.15,
     transmission: 0.85,
   });
-  const bottleMesh = new THREE.Mesh(bottleGeom, bottleMat);
-  bottleMesh.position.set(0.18, bottleY, bottleZ);
-  chassisGroup.add(bottleMesh);
 
-  // Cyan Liquid Fill inside the bottle
-  const liquidGeom = new THREE.CylinderGeometry(bottleRadius * 0.92, bottleRadius * 0.92, bottleHeight * 0.65, 16);
-  const tankLiquidMat = new THREE.MeshStandardMaterial({
-    color: 0x06b6d4,
-    transparent: true,
-    opacity: 0.75,
-    roughness: 0.1,
+  const capGeom = new THREE.CylinderGeometry(0.048, 0.048, 0.045, 14);
+  const capMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.3 });
+  const badgeGeom = new THREE.PlaneGeometry(0.12, 0.06);
+
+  const tanksRefMap: Record<1 | 2 | 3, TankRefs> = {} as any;
+  const valvesRefMap: Record<1 | 2 | 3, ValveRefs> = {} as any;
+
+  tankConfigs.forEach((cfg) => {
+    const tGroup = new THREE.Group();
+    tGroup.name = `ChemicalTank_${cfg.num}`;
+    tGroup.position.set(cfg.x, bottleY, bottleZ);
+    chassisGroup.add(tGroup);
+
+    // 1. Translucent Bottle Body
+    const bMesh = new THREE.Mesh(bottleGeom, bottleMat);
+    tGroup.add(bMesh);
+
+    // 2. Liquid Fill Mesh
+    const liqGeom = new THREE.CylinderGeometry(tankRadius * 0.92, tankRadius * 0.92, tankHeight * 0.90, 14);
+    const liqMat = new THREE.MeshStandardMaterial({
+      color: cfg.colorHex,
+      transparent: true,
+      opacity: 0.85,
+      roughness: 0.12,
+    });
+    const liqMesh = new THREE.Mesh(liqGeom, liqMat);
+    const initScaleY = Math.max(0.01, cfg.initialLevel / 100);
+    liqMesh.scale.set(1, initScaleY, 1);
+    const baseY = -tankHeight * 0.45;
+    liqMesh.position.set(0, baseY + (tankHeight * 0.90 * initScaleY) / 2, 0);
+    tGroup.add(liqMesh);
+
+    // 3. Screw Cap
+    const cMesh = new THREE.Mesh(capGeom, capMat);
+    cMesh.position.set(0, tankHeight / 2 + 0.02, 0);
+    tGroup.add(cMesh);
+
+    // 4. Tank Label Badge
+    const badgeMat = new THREE.MeshBasicMaterial({
+      map: createTankBadgeTexture(cfg.label, cfg.trt, cfg.colorCss),
+      transparent: true,
+      side: THREE.DoubleSide,
+    });
+    const badgeMesh = new THREE.Mesh(badgeGeom, badgeMat);
+    badgeMesh.position.set(0, 0, tankRadius + 0.005);
+    tGroup.add(badgeMesh);
+
+    // Aluminum mounting ring
+    const bracketGeom = new THREE.TorusGeometry(tankRadius + 0.006, 0.008, 6, 20);
+    const bracketMesh = new THREE.Mesh(bracketGeom, aluminumMat);
+    bracketMesh.rotation.x = Math.PI / 2;
+    bracketMesh.position.set(0, 0.05, 0);
+    tGroup.add(bracketMesh);
+
+    tanksRefMap[cfg.num] = {
+      group: tGroup,
+      bottleMesh: bMesh,
+      liquidMesh: liqMesh,
+      liquidMat: liqMat,
+      labelMesh: badgeMesh,
+      baseY,
+      fullHeight: tankHeight * 0.90,
+    };
+
+    // ── Solenoid Valve Under Tank ────────────────────────────────────────────
+    const vGroup = new THREE.Group();
+    vGroup.name = `SolenoidValve_${cfg.num}`;
+    vGroup.position.set(cfg.x, bottleY - tankHeight / 2 - 0.07, bottleZ);
+    chassisGroup.add(vGroup);
+
+    const vBodyGeom = new THREE.BoxGeometry(0.065, 0.055, 0.055);
+    const vBodyMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.3, metalness: 0.6 });
+    const vBody = new THREE.Mesh(vBodyGeom, vBodyMat);
+    vGroup.add(vBody);
+
+    const coilGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.04, 10);
+    const coilMesh = new THREE.Mesh(coilGeom, new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.5 }));
+    coilMesh.position.set(0, 0.045, 0);
+    vGroup.add(coilMesh);
+
+    const indGeom = new THREE.CylinderGeometry(0.018, 0.018, 0.012, 12);
+    const indMat = new THREE.MeshBasicMaterial({ color: 0xef4444 }); // CLOSED red
+    const indMesh = new THREE.Mesh(indGeom, indMat);
+    indMesh.rotation.x = Math.PI / 2;
+    indMesh.position.set(0, 0, 0.032);
+    vGroup.add(indMesh);
+
+    valvesRefMap[cfg.num] = {
+      group: vGroup,
+      indicatorMesh: indMesh,
+      indicatorMat: indMat,
+      state: 'CLOSED',
+    };
   });
-  const tankLiquidMesh = new THREE.Mesh(liquidGeom, tankLiquidMat);
-  tankLiquidMesh.position.set(0.18, bottleY - 0.1, bottleZ);
-  chassisGroup.add(tankLiquidMesh);
 
-  // Blue screw cap
-  const capGeom = new THREE.CylinderGeometry(0.08, 0.08, 0.06, 16);
-  const capMesh = new THREE.Mesh(capGeom, new THREE.MeshStandardMaterial({ color: 0x2563eb }));
-  capMesh.position.set(0.18, bottleY + bottleHeight / 2 + 0.03, bottleZ);
-  chassisGroup.add(capMesh);
+  // ── Central 12V Diaphragm Pump & Manifold Block ───────────────────────────
+  const pumpGroup = new THREE.Group();
+  pumpGroup.name = 'DiaphragmPumpAssembly';
+  pumpGroup.position.set(0.0, 0.50, -0.16);
+  chassisGroup.add(pumpGroup);
 
-  // Clear vinyl tubing leading down to mini spray nozzle
-  const tubeMesh = createWire(
-    [
-      new THREE.Vector3(0.18, bottleY + bottleHeight / 2 + 0.03, bottleZ),
-      new THREE.Vector3(0.10, 0.65, bottleZ),
-      new THREE.Vector3(0.0, 0.52, bottleZ),
-    ],
-    0xe0f2fe,
-    0.012
-  );
-  chassisGroup.add(tubeMesh);
+  const pumpCasingGeom = new THREE.BoxGeometry(0.12, 0.08, 0.14);
+  const pumpCasingMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.35, metalness: 0.4 });
+  const pumpCasing = new THREE.Mesh(pumpCasingGeom, pumpCasingMat);
+  pumpGroup.add(pumpCasing);
 
-  // Brass Atomizing Spray Nozzle
-  const nozzleGeom = new THREE.ConeGeometry(0.05, 0.12, 12);
-  const nozzleMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.25, metalness: 0.9 });
-  const sprayNozzleMesh = new THREE.Mesh(nozzleGeom, nozzleMat);
-  sprayNozzleMesh.rotation.x = Math.PI; // pointing down
-  sprayNozzleMesh.position.set(0.0, 0.45, bottleZ);
-  chassisGroup.add(sprayNozzleMesh);
+  const motorGeom = new THREE.CylinderGeometry(0.038, 0.038, 0.11, 14);
+  const motorMesh = new THREE.Mesh(motorGeom, aluminumMat);
+  motorMesh.rotation.x = Math.PI / 2;
+  motorMesh.position.set(0, 0, -0.09);
+  pumpGroup.add(motorMesh);
+
+  const pumpLedGeom = new THREE.SphereGeometry(0.014, 10, 10);
+  const pumpLedMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+  const pumpLedMesh = new THREE.Mesh(pumpLedGeom, pumpLedMat);
+  pumpLedMesh.position.set(0, 0.045, 0.04);
+  pumpGroup.add(pumpLedMesh);
+
+  const manifoldGeom = new THREE.BoxGeometry(0.24, 0.035, 0.05);
+  const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.28, metalness: 0.85 });
+  const manifoldMesh = new THREE.Mesh(manifoldGeom, brassMat);
+  manifoldMesh.position.set(0, -0.045, 0.01);
+  pumpGroup.add(manifoldMesh);
+
+  // ── Three Individual Pipes & Brass Nozzles ────────────────────────────────
+  const pipeConfigs = [
+    {
+      num: 1 as const,
+      colorCss: '#06b6d4',
+      colorHex: 0x06b6d4,
+      pts: [
+        new THREE.Vector3(-0.26, bottleY - tankHeight / 2 - 0.09, bottleZ),
+        new THREE.Vector3(-0.22, 0.54, -0.24),
+        new THREE.Vector3(-0.08, 0.47, -0.16),
+        new THREE.Vector3(-0.11, 0.43, -0.08),
+        new THREE.Vector3(-0.18, 0.36, 0.04),
+      ],
+      nozzlePos: new THREE.Vector3(-0.18, 0.34, 0.05),
+    },
+    {
+      num: 2 as const,
+      colorCss: '#10b981',
+      colorHex: 0x10b981,
+      pts: [
+        new THREE.Vector3(0.00, bottleY - tankHeight / 2 - 0.09, bottleZ),
+        new THREE.Vector3(0.00, 0.54, -0.24),
+        new THREE.Vector3(0.00, 0.47, -0.16),
+        new THREE.Vector3(0.00, 0.43, -0.08),
+        new THREE.Vector3(0.00, 0.36, 0.04),
+      ],
+      nozzlePos: new THREE.Vector3(0.00, 0.34, 0.05),
+    },
+    {
+      num: 3 as const,
+      colorCss: '#38bdf8',
+      colorHex: 0x38bdf8,
+      pts: [
+        new THREE.Vector3(0.26, bottleY - tankHeight / 2 - 0.09, bottleZ),
+        new THREE.Vector3(0.22, 0.54, -0.24),
+        new THREE.Vector3(0.08, 0.47, -0.16),
+        new THREE.Vector3(0.11, 0.43, -0.08),
+        new THREE.Vector3(0.18, 0.36, 0.04),
+      ],
+      nozzlePos: new THREE.Vector3(0.18, 0.34, 0.05),
+    },
+  ];
+
+  const pipesRefMap: Record<1 | 2 | 3, PipeRefs> = {} as any;
+  const nozzlesRefMap: Record<1 | 2 | 3, THREE.Mesh> = {} as any;
+
+  const vinylOuterMat = new THREE.MeshPhysicalMaterial({
+    color: 0xf1f5f9,
+    transparent: true,
+    opacity: 0.38,
+    roughness: 0.12,
+    transmission: 0.82,
+    depthWrite: false,
+  });
+
+  const nozzleGeom = new THREE.ConeGeometry(0.038, 0.09, 12);
+
+  pipeConfigs.forEach((pc) => {
+    const curve = new THREE.CatmullRomCurve3(pc.pts);
+
+    // 1. Clear outer tube
+    const outerGeom = new THREE.TubeGeometry(curve, 32, 0.012, 8, false);
+    const outerMesh = new THREE.Mesh(outerGeom, vinylOuterMat);
+    chassisGroup.add(outerMesh);
+
+    // 2. Inner fluid core with animated procedural flow texture
+    const flowTex = createPipeFlowTexture(pc.colorCss);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: pc.colorHex,
+      map: flowTex,
+      transparent: true,
+      opacity: 0.06,
+      roughness: 0.18,
+      metalness: 0.1,
+    });
+    const coreGeom = new THREE.TubeGeometry(curve, 32, 0.0085, 8, false);
+    const coreMesh = new THREE.Mesh(coreGeom, coreMat);
+    chassisGroup.add(coreMesh);
+
+    pipesRefMap[pc.num] = {
+      outerTubeMesh: outerMesh,
+      fluidCoreMesh: coreMesh,
+      fluidCoreMat: coreMat,
+      flowTexture: flowTex,
+      isActive: false,
+    };
+
+    // 3. Atomizing Brass Cone Nozzle at pipe termination
+    const nMesh = new THREE.Mesh(nozzleGeom, brassMat);
+    nMesh.name = `SprayNozzle_${pc.num}`;
+    nMesh.rotation.x = Math.PI * 0.72;
+    nMesh.position.copy(pc.nozzlePos);
+    chassisGroup.add(nMesh);
+    nozzlesRefMap[pc.num] = nMesh;
+  });
+
+  const setTankLevel = (tankNum: 1 | 2 | 3, pct: number) => {
+    const t = tanksRefMap[tankNum];
+    if (!t) return;
+    const clamped = Math.max(0, Math.min(100, pct));
+    const scaleY = Math.max(0.01, clamped / 100);
+    t.liquidMesh.scale.set(1, scaleY, 1);
+    t.liquidMesh.position.y = t.baseY + (t.fullHeight * scaleY) / 2;
+  };
+
+  const setValveState = (valveNum: 1 | 2 | 3, state: 'OPEN' | 'CLOSED') => {
+    const v = valvesRefMap[valveNum];
+    if (!v) return;
+    v.state = state;
+    v.indicatorMat.color.setHex(state === 'OPEN' ? 0x22c55e : 0xef4444);
+  };
+
+  const setPumpState = (state: 'OFF' | 'ON') => {
+    pumpLedMat.color.setHex(state === 'ON' ? 0x38bdf8 : 0x1e293b);
+  };
+
+  const setPipeFlow = (pipeNum: 1 | 2 | 3, active: boolean) => {
+    [1, 2, 3].forEach((pNum) => {
+      const p = pipesRefMap[pNum as 1 | 2 | 3];
+      if (!p) return;
+      if (pNum === pipeNum && active) {
+        p.isActive = true;
+        p.fluidCoreMat.opacity = 0.92;
+      } else {
+        p.isActive = false;
+        p.fluidCoreMat.opacity = 0.05;
+      }
+    });
+  };
+
+  const updateFlowAnimation = (deltaSec: number) => {
+    [1, 2, 3].forEach((pNum) => {
+      const p = pipesRefMap[pNum as 1 | 2 | 3];
+      if (p && p.isActive) {
+        p.flowTexture.offset.x -= deltaSec * 3.2;
+      }
+    });
+  };
+
+  const plumbing: TreatmentPlumbingRefs = {
+    tanks: tanksRefMap,
+    valves: valvesRefMap,
+    pump: {
+      group: pumpGroup,
+      ledMesh: pumpLedMesh,
+      ledMat: pumpLedMat,
+      state: 'OFF',
+    },
+    pipes: pipesRefMap,
+    nozzles: nozzlesRefMap,
+    setTankLevel,
+    setValveState,
+    setPumpState,
+    setPipeFlow,
+    updateFlowAnimation,
+  };
+
+  const sprayNozzleMesh = nozzlesRefMap[2];
+  const tankLiquidMesh = tanksRefMap[2].liquidMesh;
 
   // Dynamic Spray Particle System (Mist fountain)
   const particleCount = 260;
@@ -941,8 +1313,8 @@ export function createAgriGuardRobot(): RobotModelRefs {
 
   for (let i = 0; i < particleCount; i++) {
     positions[i * 3 + 0] = 0.0;
-    positions[i * 3 + 1] = 0.42;
-    positions[i * 3 + 2] = bottleZ;
+    positions[i * 3 + 1] = 0.36;
+    positions[i * 3 + 2] = 0.05;
 
     const spread = 0.45;
     velocities[i * 3 + 0] = (Math.random() - 0.5) * spread;
@@ -1085,5 +1457,6 @@ export function createAgriGuardRobot(): RobotModelRefs {
     statusLedMaterial,
     sprayNozzleMesh,
     tankLiquidMesh,
+    plumbing,
   };
 }

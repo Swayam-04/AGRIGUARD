@@ -456,53 +456,57 @@ export class FarmScene {
     rowXCoords.forEach((rx, rowIdx) => {
       for (let colIdx = 0; colIdx < plantsPerRow; colIdx++) {
         const pz = zStart + colIdx * zSpacing;
-        const id = `PLANT-#${String(plantCounter).padStart(3, '0')}`;
+        let id = `PLANT-#${String(plantCounter).padStart(3, '0')}`;
 
         // Specific disease targets positioned along robot's path
         let state: PlantHealthState = 'HEALTHY';
         let healthScore = 91 + Math.floor(Math.random() * 7);
         let diseaseInfo = undefined;
 
-        // Target plant in Row 3 near starting corridor (matching reference image pathology)
-        if (rx === -1.5 && pz === 0.0) {
+        // Target plant in Row 3 near starting corridor: Plant #023 (Tomato, Early Blight, 94%, Moderate)
+        if (rx === -1.5 && pz === 2.0) {
+          id = 'Plant #023';
           state = 'DISEASED';
           healthScore = 41;
           diseaseInfo = {
             name: 'Early Blight',
             pathogen: 'Alternaria solani',
-            confidence: 0.924,
-            symptoms: 'Concentric brown foliar lesion rings with chlorotic yellow halo',
-            recommendedTreatment: 'Targeted Copper Hydroxide (2.5 g/L) micro-pulse fungicide',
-            chemicalProduct: 'Kocide 3000 / Copper Hydroxide',
+            confidence: 0.94,
+            severity: 'Moderate',
+            symptoms: 'Dark concentric brown necrotic rings with chlorotic yellow halo on lower foliage',
+            recommendedTreatment: 'Treatment B',
+            chemicalProduct: 'Cold-Pressed Bio-Neem Solution',
             recommendedDoseMl: 40,
             inventoryAvailable: true,
           };
-        } else if (rx === -1.5 && pz === 2.0) {
-          // Warning state plant adjacent to diseased target
-          state = 'WARNING';
-          healthScore = 68;
+        } else if (rx === -1.5 && pz === 0.0) {
+          id = 'Plant #022';
+          state = 'DISEASED';
+          healthScore = 38;
           diseaseInfo = {
-            name: 'Initial Foliar Chlorosis',
-            pathogen: 'Nutrient Deficiency / Early Pathogen',
-            confidence: 0.76,
-            symptoms: 'Mild interveinal yellowing on lower leaves',
-            recommendedTreatment: 'Micro-nutrient foliar spray with bio-fungicide booster',
-            chemicalProduct: 'Zinc-Manganese Chelate',
-            recommendedDoseMl: 30,
+            name: 'Late Blight',
+            pathogen: 'Phytophthora infestans',
+            confidence: 0.91,
+            severity: 'Severe',
+            symptoms: 'Water-soaked irregular necrotic patches on leaf margins with white sporulation',
+            recommendedTreatment: 'Treatment A',
+            chemicalProduct: 'Copper Hydroxide 77% Solution',
+            recommendedDoseMl: 45,
             inventoryAvailable: true,
           };
         } else if (rx === 1.5 && pz === 2.0) {
-          // Warning state plant on right side of starting furrow
+          id = 'Plant #054';
           state = 'WARNING';
           healthScore = 71;
           diseaseInfo = {
-            name: 'Early Aphid Foliar Stress',
-            pathogen: 'Aphis gossypii',
-            confidence: 0.81,
-            symptoms: 'Curling leaf margins with sticky honeydew residue on young shoots',
-            recommendedTreatment: 'Organic Cold-Pressed Neem Oil (5 mL/L) foliar spray',
-            chemicalProduct: 'Pure Neem Bio-Pesticide',
-            recommendedDoseMl: 35,
+            name: 'Nutrient Imbalance & Chlorosis',
+            pathogen: 'Physiological Stress',
+            confidence: 0.82,
+            severity: 'Mild',
+            symptoms: 'Interveinal yellowing on lower leaves; foliar wash and nutrient boost indicated',
+            recommendedTreatment: 'Treatment C',
+            chemicalProduct: 'Clean Rinsing & Mineral Protectant',
+            recommendedDoseMl: 30,
             inventoryAvailable: true,
           };
         } else if (rx === 1.5 && pz === -6.0) {
@@ -852,27 +856,65 @@ export class FarmScene {
     this.scene.add(this.sprayParticles);
   }
 
-  public activateSpray(targetPlant: FarmPlant) {
+  private activeNozzleNum: 1 | 2 | 3 = 2;
+  private activeTankNum: 1 | 2 | 3 = 2;
+  private lastAnimTime = 0;
+
+  public activateTreatmentSpray(targetPlant: FarmPlant, nozzleNum: 1 | 2 | 3 = 2, tankNum: 1 | 2 | 3 = 2) {
     this.sprayActive = true;
+    this.activeNozzleNum = nozzleNum;
+    this.activeTankNum = tankNum;
     this.sprayTargetPos.set(targetPlant.position.x, 0.45, targetPlant.position.z);
-    (this.sprayParticles.material as THREE.PointsMaterial).opacity = 0.85;
+
+    // Color particles according to selected tank
+    const tankColors: Record<1 | 2 | 3, number> = {
+      1: 0x06b6d4, // Treatment A (Copper)
+      2: 0x10b981, // Treatment B (Organic Bio-Neem)
+      3: 0x38bdf8, // Treatment C (Mineral)
+    };
+    (this.sprayParticles.material as THREE.PointsMaterial).color.setHex(tankColors[tankNum] || 0x10b981);
+    (this.sprayParticles.material as THREE.PointsMaterial).opacity = 0.88;
+
+    const nozzleWorldPos = this.getNozzleWorldPosition(nozzleNum);
 
     const count = this.sprayPositions.length / 3;
     for (let i = 0; i < count; i++) {
-      this.sprayPositions[i * 3 + 0] = this.robotX;
-      this.sprayPositions[i * 3 + 1] = 1.0;
-      this.sprayPositions[i * 3 + 2] = this.robotZ;
+      this.sprayPositions[i * 3 + 0] = nozzleWorldPos.x;
+      this.sprayPositions[i * 3 + 1] = nozzleWorldPos.y;
+      this.sprayPositions[i * 3 + 2] = nozzleWorldPos.z;
 
-      const toTarget = this.sprayTargetPos.clone().sub(new THREE.Vector3(this.robotX, 1.0, this.robotZ)).normalize();
-      this.sprayVelocities[i * 3 + 0] = toTarget.x * 2.8 + (Math.random() - 0.5) * 0.4;
-      this.sprayVelocities[i * 3 + 1] = -0.8 - Math.random() * 0.6;
-      this.sprayVelocities[i * 3 + 2] = toTarget.z * 2.8 + (Math.random() - 0.5) * 0.4;
+      const toTarget = this.sprayTargetPos.clone().sub(nozzleWorldPos).normalize();
+      this.sprayVelocities[i * 3 + 0] = toTarget.x * 2.8 + (Math.random() - 0.5) * 0.35;
+      this.sprayVelocities[i * 3 + 1] = toTarget.y * 2.8 + (Math.random() - 0.5) * 0.35;
+      this.sprayVelocities[i * 3 + 2] = toTarget.z * 2.8 + (Math.random() - 0.5) * 0.35;
     }
+  }
+
+  public activateSpray(targetPlant: FarmPlant) {
+    this.activateTreatmentSpray(targetPlant, 2, 2);
   }
 
   public deactivateSpray() {
     this.sprayActive = false;
     (this.sprayParticles.material as THREE.PointsMaterial).opacity = 0.0;
+  }
+
+  public getNozzleWorldPosition(nozzleNum: 1 | 2 | 3 = 2): THREE.Vector3 {
+    const n = this.robotRefs?.plumbing?.nozzles?.[nozzleNum];
+    const out = new THREE.Vector3();
+    if (n) {
+      n.getWorldPosition(out);
+      return out;
+    }
+    return new THREE.Vector3(this.robotX, 0.42, this.robotZ);
+  }
+
+  public getDistanceToPlant(plant: FarmPlant): number {
+    return Math.hypot(plant.position.x - this.robotX, plant.position.z - this.robotZ);
+  }
+
+  public isTargetInRange(plant: FarmPlant, maxRangeMeters = 2.2): boolean {
+    return this.getDistanceToPlant(plant) <= maxRangeMeters;
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -1196,7 +1238,7 @@ export class FarmScene {
     return { safetyStop, blocked };
   }
 
-  private syncRobotTransform() {
+  public syncRobotTransform() {
     this.robotRefs.rootGroup.position.set(this.robotX, 0, this.robotZ);
     // Orient model so its front faces along the heading direction
     this.robotRefs.rootGroup.rotation.y = -this.robotHeading + Math.PI;
@@ -1207,21 +1249,22 @@ export class FarmScene {
     const pos = this.sprayPositions;
     const vel = this.sprayVelocities;
     const count = pos.length / 3;
+    const nozzleWorldPos = this.getNozzleWorldPosition(this.activeNozzleNum);
 
     for (let i = 0; i < count; i++) {
       pos[i * 3 + 0] += vel[i * 3 + 0] * delta;
       pos[i * 3 + 1] += vel[i * 3 + 1] * delta;
       pos[i * 3 + 2] += vel[i * 3 + 2] * delta;
 
-      if (pos[i * 3 + 1] < 0.1) {
-        // Reset particle from nozzle
-        pos[i * 3 + 0] = this.robotX;
-        pos[i * 3 + 1] = 0.95;
-        pos[i * 3 + 2] = this.robotZ;
+      if (pos[i * 3 + 1] < 0.15 || pos[i * 3 + 1] > 2.5) {
+        // Reset particle from selected nozzle
+        pos[i * 3 + 0] = nozzleWorldPos.x;
+        pos[i * 3 + 1] = nozzleWorldPos.y;
+        pos[i * 3 + 2] = nozzleWorldPos.z;
 
-        const toTarget = this.sprayTargetPos.clone().sub(new THREE.Vector3(this.robotX, 0.95, this.robotZ)).normalize();
+        const toTarget = this.sprayTargetPos.clone().sub(nozzleWorldPos).normalize();
         vel[i * 3 + 0] = toTarget.x * 2.8 + (Math.random() - 0.5) * 0.35;
-        vel[i * 3 + 1] = -0.7 - Math.random() * 0.5;
+        vel[i * 3 + 1] = toTarget.y * 2.8 + (Math.random() - 0.5) * 0.35;
         vel[i * 3 + 2] = toTarget.z * 2.8 + (Math.random() - 0.5) * 0.35;
       }
     }
@@ -1367,6 +1410,14 @@ export class FarmScene {
       this.reticleBrackets.rotation.y -= 0.012;
       const hoverY = 1.05 + Math.sin(performance.now() * 0.004) * 0.04;
       this.targetReticleGroup.position.y = hoverY;
+    }
+
+    // Animate fluid flow inside active treatment pipes
+    const now = performance.now();
+    const animDelta = Math.min(0.05, (now - (this.lastAnimTime || now)) / 1000);
+    this.lastAnimTime = now;
+    if (this.robotRefs?.plumbing) {
+      this.robotRefs.plumbing.updateFlowAnimation(animDelta);
     }
 
     this.controls.update();

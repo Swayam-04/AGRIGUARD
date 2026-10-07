@@ -24,6 +24,7 @@ export interface FarmPlant {
     name: string;
     pathogen: string;
     confidence: number; // 0.0 - 1.0
+    severity?: string;
     symptoms: string;
     recommendedTreatment: string;
     chemicalProduct: string;
@@ -95,6 +96,8 @@ export interface SimulatorTelemetry {
   sprayActive: boolean;
   sprayTargetPlantId: string | null;
   detectedPlant?: FarmPlant | null;
+  tanks?: Record<'TANK_1' | 'TANK_2' | 'TANK_3', ChemicalTankState>;
+  treatmentWorkflow?: TreatmentWorkflowState;
 }
 
 export type DataSourceTag = 'MEASURED' | 'ESTIMATED' | 'SIMULATED' | 'CONFIGURED_FACTOR';
@@ -261,3 +264,84 @@ export interface SimulatorLogEvent {
   type: 'INFO' | 'NAV' | 'SAFETY' | 'DETECTION' | 'TREATMENT' | 'ALERT';
   message: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Multi-Tank Realistic Treatment Delivery Simulation Types
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ChemicalTankState {
+  id: 'TANK_1' | 'TANK_2' | 'TANK_3';
+  tankNumber: 1 | 2 | 3;
+  label: string;
+  treatmentName: string;
+  chemicalProduct: string;
+  chemicalClass: string;
+  capacityMl: number;
+  currentMl: number;
+  levelPct: number;
+  valveState: 'OPEN' | 'CLOSED';
+  colorHex: number;
+  colorCss: string;
+  minSafeLevelMl: number;
+  flowRateMlPerSec: number;
+}
+
+export type TreatmentStepId =
+  | 'IDLE'
+  | 'DETECTED'
+  | 'IDENTIFIED'
+  | 'DECISION_MADE'
+  | 'INVENTORY_CHECKED'
+  | 'RANGE_CHECKED'
+  | 'FARMER_APPROVED'
+  | 'TANK_SELECTED'
+  | 'VALVE_OPENED'
+  | 'PUMP_ACTIVATED'
+  | 'PIPE_FLOWING'
+  | 'NOZZLE_SPRAYING'
+  | 'SPRAY_STOPPED'
+  | 'VALVE_CLOSED'
+  | 'PUMP_STOPPED'
+  | 'PLANT_TREATED'
+  | 'COMPLETED';
+
+export interface TreatmentWorkflowState {
+  step: TreatmentStepId;
+  stepIndex: number;
+  totalSteps: number;
+  activeTankId: 'TANK_1' | 'TANK_2' | 'TANK_3' | null;
+  activeValveId: 1 | 2 | 3 | null;
+  activeNozzleId: 1 | 2 | 3 | null;
+  pumpRunning: boolean;
+  flowProgress: number; // 0.0 to 1.0 (Tank -> Valve -> Pipe -> Nozzle)
+  targetPlant: FarmPlant | null;
+  requiredTreatment: string | null;
+  sourceTankLabel: string | null;
+  inventoryAvailable: boolean;
+  estimatedVolumeMl: number;
+  durationSec: number;
+  inRange: boolean;
+  distanceMeters: number;
+  statusMessage: string;
+  isFlowing: boolean;
+  isSpraying: boolean;
+  isCompleted: boolean;
+}
+
+export interface TreatmentEventRecord {
+  id: string;
+  plantId: string;
+  crop: string;
+  disease: string;
+  confidence: number;
+  requiredTreatment: string;
+  tankUsed: string;
+  valveUsed: string;
+  nozzleUsed: string;
+  sprayDurationSec: number;
+  estimatedVolumeMl: number;
+  timestamp: string;
+  status: 'COMPLETED' | 'REJECTED' | 'UNAVAILABLE';
+  operator: string;
+}
+

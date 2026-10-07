@@ -22,6 +22,9 @@ import {
   SimulatorLogEvent,
   SimulatorTelemetry,
   CarbonImpactModel,
+  ChemicalTankState,
+  TreatmentWorkflowState,
+  TreatmentEventRecord,
 } from './types';
 import { buzzerAudio } from './BuzzerAudio';
 import { carbonCalculator, CarbonImpactCalculator } from './CarbonEngine';
@@ -87,6 +90,85 @@ export class SimulatorManager {
 
   // Active Target Crop Plant
   public detectedPlant: FarmPlant | null = null;
+
+  // ── Multi-Tank Precision Plumbing & Inventory State ────────────────────────
+  public tanks: Record<'TANK_1' | 'TANK_2' | 'TANK_3', ChemicalTankState> = {
+    TANK_1: {
+      id: 'TANK_1',
+      tankNumber: 1,
+      label: 'Tank 1',
+      treatmentName: 'Treatment A',
+      chemicalProduct: 'Copper Hydroxide 77% Solution',
+      chemicalClass: 'Inorganic Copper Fungicide (FRAC M01)',
+      capacityMl: 1000.0,
+      currentMl: 680.0,
+      levelPct: 68.0,
+      valveState: 'CLOSED',
+      colorHex: 0x06b6d4,
+      colorCss: '#06b6d4',
+      minSafeLevelMl: 60.0,
+      flowRateMlPerSec: 20.0,
+    },
+    TANK_2: {
+      id: 'TANK_2',
+      tankNumber: 2,
+      label: 'Tank 2',
+      treatmentName: 'Treatment B',
+      chemicalProduct: 'Cold-Pressed Bio-Neem Solution',
+      chemicalClass: 'Botanical Bio-Pesticide (Azadirachtin)',
+      capacityMl: 800.0,
+      currentMl: 336.0,
+      levelPct: 42.0, // Matches prompt example: 42%!
+      valveState: 'CLOSED',
+      colorHex: 0x10b981,
+      colorCss: '#10b981',
+      minSafeLevelMl: 50.0,
+      flowRateMlPerSec: 20.0,
+    },
+    TANK_3: {
+      id: 'TANK_3',
+      tankNumber: 3,
+      label: 'Tank 3',
+      treatmentName: 'Treatment C',
+      chemicalProduct: 'Clean Rinsing & Mineral Protectant',
+      chemicalClass: 'Solvent / Micronutrient Wash',
+      capacityMl: 1200.0,
+      currentMl: 0.0, // Matches prompt example: 0% / empty
+      levelPct: 0.0,
+      valveState: 'CLOSED',
+      colorHex: 0x38bdf8,
+      colorCss: '#38bdf8',
+      minSafeLevelMl: 80.0,
+      flowRateMlPerSec: 20.0,
+    },
+  };
+
+  // Live Step-by-Step Treatment Delivery State
+  public workflowState: TreatmentWorkflowState = {
+    step: 'IDLE',
+    stepIndex: 0,
+    totalSteps: 15,
+    activeTankId: null,
+    activeValveId: null,
+    activeNozzleId: null,
+    pumpRunning: false,
+    flowProgress: 0.0,
+    targetPlant: null,
+    requiredTreatment: null,
+    sourceTankLabel: null,
+    inventoryAvailable: false,
+    estimatedVolumeMl: 40.0,
+    durationSec: 2.0,
+    inRange: false,
+    distanceMeters: 0.0,
+    statusMessage: 'Scanning crop furrows. Approach canopy to acquire target.',
+    isFlowing: false,
+    isSpraying: false,
+    isCompleted: false,
+  };
+
+  public treatmentHistory: TreatmentEventRecord[] = [];
+  private deliveryTimeouts: number[] = [];
 
   // Safety & Alarms
   public safetyStopActive = false;
@@ -228,77 +310,316 @@ export class SimulatorManager {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Farmer Approval Gate & Precision Spray Actuation
+  // Realistic Multi-Tank Treatment Delivery Engine (15-Step Workflow)
   // ───────────────────────────────────────────────────────────────────────────
-  public approveAndSpray(operatorName: string): boolean {
-    if (!this.detectedPlant || !this.detectedPlant.disease) {
-      this.addLog('ALERT', 'Spray rejected: No validated crop disease target acquired.');
-      return false;
+  public getTreatmentForPlant(plant: FarmPlant): {
+    requiredTreatment: 'Treatment A' | 'Treatment B' | 'Treatment C';
+    tankId: 'TANK_1' | 'TANK_2' | 'TANK_3';
+    valveNum: 1 | 2 | 3;
+    nozzleNum: 1 | 2 | 3;
+    recommendedDoseMl: number;
+    chemicalProduct: string;
+  } {
+    const diseaseName = plant.disease?.name?.toLowerCase() || '';
+    if (diseaseName.includes('early blight') || diseaseName.includes('neem')) {
+      return {
+        requiredTreatment: 'Treatment B',
+        tankId: 'TANK_2',
+        valveNum: 2,
+        nozzleNum: 2,
+        recommendedDoseMl: 40.0,
+        chemicalProduct: this.tanks.TANK_2.chemicalProduct,
+      };
+    } else if (diseaseName.includes('late blight') || diseaseName.includes('copper') || diseaseName.includes('bacterial') || diseaseName.includes('septoria')) {
+      return {
+        requiredTreatment: 'Treatment A',
+        tankId: 'TANK_1',
+        valveNum: 1,
+        nozzleNum: 1,
+        recommendedDoseMl: 45.0,
+        chemicalProduct: this.tanks.TANK_1.chemicalProduct,
+      };
+    } else {
+      return {
+        requiredTreatment: 'Treatment C',
+        tankId: 'TANK_3',
+        valveNum: 3,
+        nozzleNum: 3,
+        recommendedDoseMl: 30.0,
+        chemicalProduct: this.tanks.TANK_3.chemicalProduct,
+      };
+    }
+  }
+
+  public updateWorkflowForTarget(plant: FarmPlant | null) {
+    if (!plant || plant.state === 'HEALTHY') {
+      if (!this.workflowState.isFlowing && !this.workflowState.isSpraying && this.workflowState.step !== 'COMPLETED') {
+        this.workflowState = {
+          ...this.workflowState,
+          step: 'IDLE',
+          stepIndex: 0,
+          targetPlant: null,
+          requiredTreatment: null,
+          sourceTankLabel: null,
+          statusMessage: 'Scanning crop furrows. Approach canopy to acquire target.',
+        };
+      }
+      return;
     }
 
-    if (this.safetyStopActive) {
-      this.addLog('ALERT', 'Spray rejected: Cannot spray while in safety stop state.');
+    if (this.workflowState.isFlowing || this.workflowState.isSpraying) {
+      return; // Do not disrupt active physical delivery sequence
+    }
+
+    const trtInfo = this.getTreatmentForPlant(plant);
+    const targetTank = this.tanks[trtInfo.tankId];
+    const isAvail = targetTank.currentMl >= trtInfo.recommendedDoseMl;
+    const dist = this.scene.getDistanceToPlant(plant);
+    const inRange = dist <= 2.2;
+
+    this.workflowState = {
+      ...this.workflowState,
+      step: plant.state === 'TREATED' ? 'COMPLETED' : 'RANGE_CHECKED',
+      stepIndex: plant.state === 'TREATED' ? 15 : 5,
+      targetPlant: plant,
+      requiredTreatment: trtInfo.requiredTreatment,
+      activeTankId: trtInfo.tankId,
+      activeValveId: trtInfo.valveNum,
+      activeNozzleId: trtInfo.nozzleNum,
+      sourceTankLabel: `${targetTank.label} (${targetTank.treatmentName})`,
+      inventoryAvailable: isAvail,
+      estimatedVolumeMl: trtInfo.recommendedDoseMl,
+      durationSec: trtInfo.recommendedDoseMl / targetTank.flowRateMlPerSec,
+      inRange,
+      distanceMeters: Number(dist.toFixed(2)),
+      statusMessage: plant.state === 'TREATED'
+        ? `${plant.id} is already TREATED.`
+        : !isAvail
+        ? `Required treatment unavailable: ${targetTank.label} is EMPTY. Farmer action required.`
+        : !inRange
+        ? `TARGET OUT OF RANGE (${dist.toFixed(1)}m): Move rover within 2.2m to spray.`
+        : `TARGET IN RANGE (${dist.toFixed(1)}m): ${trtInfo.requiredTreatment} ready in ${targetTank.label}. Awaiting Farmer Approval.`,
+      isCompleted: plant.state === 'TREATED',
+    };
+  }
+
+  public approveAndSpray(operatorName: string): boolean {
+    if (!this.detectedPlant) {
+      this.addLog('ALERT', 'Treatment rejected: No plant target acquired.');
       return false;
     }
 
     const plant = this.detectedPlant;
-    const doseMl = plant.disease.recommendedDoseMl || 42;
+    if (plant.state === 'TREATED') {
+      this.addLog('INFO', `Target ${plant.id} is already TREATED. Additional spray skipped.`);
+      return false;
+    }
 
-    this.pumpState = 'ON';
-    this.relayState = 'ON';
-    this.sprayActive = true;
-    this.scene.activateSpray(plant);
+    if (this.safetyStopActive) {
+      this.addLog('ALERT', 'Treatment rejected: Safety hard-stop is active. Maneuver clear of obstacle.');
+      return false;
+    }
 
-    // Cryptographic audit token simulation
+    const trtInfo = this.getTreatmentForPlant(plant);
+    const targetTank = this.tanks[trtInfo.tankId];
+    const doseMl = trtInfo.recommendedDoseMl;
+    const durationSec = doseMl / targetTank.flowRateMlPerSec;
+
+    // Inventory Gate
+    if (targetTank.currentMl < doseMl) {
+      this.workflowState = {
+        ...this.workflowState,
+        step: 'INVENTORY_CHECKED',
+        inventoryAvailable: false,
+        statusMessage: `TREATMENT UNAVAILABLE: ${targetTank.label} (${targetTank.treatmentName}) is EMPTY. Farmer intervention required.`,
+      };
+      this.addLog('ALERT', `TREATMENT UNAVAILABLE: ${targetTank.label} has insufficient chemical stock (${targetTank.currentMl} mL remaining). Refill required.`);
+      return false;
+    }
+
+    // Range Gate
+    const dist = this.scene.getDistanceToPlant(plant);
+    if (dist > 2.2) {
+      this.workflowState = {
+        ...this.workflowState,
+        step: 'RANGE_CHECKED',
+        inRange: false,
+        statusMessage: `TARGET OUT OF RANGE (${dist.toFixed(1)}m): Move robot closer along furrow (within 2.2m) before spraying.`,
+      };
+      this.addLog('ALERT', `TARGET OUT OF RANGE: Distance to ${plant.id} is ${dist.toFixed(2)}m (Max reach is 2.2m).`);
+      return false;
+    }
+
+    // Clear any previous delivery timers
+    this.deliveryTimeouts.forEach((t) => window.clearTimeout(t));
+    this.deliveryTimeouts = [];
+
+    // STEP 5: Farmer Approved
     const token = `AUTH-SIM-${Date.now()}-${operatorName.toUpperCase()}`;
-    this.addLog(
-      'TREATMENT',
-      `Farmer approval verified (${operatorName}). Token: ${token}. Actuating 12V pump for ${plant.id}.`
-    );
+    this.workflowState = {
+      ...this.workflowState,
+      step: 'FARMER_APPROVED',
+      stepIndex: 6,
+      statusMessage: `Farmer approval verified (${operatorName}). Token: ${token}. Starting delivery sequence.`,
+    };
+    this.addLog('TREATMENT', `Farmer approval verified (${operatorName}). Token: ${token}. Initiating physical plumbing line.`);
 
-    // Actuate spray pulse for 2.5 seconds
-    if (this.sprayTimer) window.clearTimeout(this.sprayTimer);
-    this.sprayTimer = window.setTimeout(() => {
-      this.deactivateSpray();
+    // STEP 5 & 6 (T = 0s): Select Tank & Open Corresponding Valve
+    const t1 = window.setTimeout(() => {
+      this.workflowState = {
+        ...this.workflowState,
+        step: 'VALVE_OPENED',
+        stepIndex: 8,
+        activeTankId: trtInfo.tankId,
+        activeValveId: trtInfo.valveNum,
+        statusMessage: `${targetTank.label} (${trtInfo.requiredTreatment}) selected. Valve ${trtInfo.valveNum}: OPEN. All other valves: CLOSED.`,
+      };
+      // 3D Visual Valve State: only the selected valve opens!
+      [1, 2, 3].forEach((vNum) => {
+        const vState = vNum === trtInfo.valveNum ? 'OPEN' : 'CLOSED';
+        this.tanks[`TANK_${vNum}` as 'TANK_1' | 'TANK_2' | 'TANK_3'].valveState = vState;
+        this.scene.robotRefs?.plumbing?.setValveState(vNum as 1 | 2 | 3, vState);
+      });
+      this.addLog('TREATMENT', `[STEP 5 & 6] ${targetTank.label} selected. Valve ${trtInfo.valveNum}: OPEN. Other valves: CLOSED.`);
+    }, 80);
+    this.deliveryTimeouts.push(t1);
 
-      // Transition plant state to TREATED
+    // STEP 7 & 8 (T = 500ms): Activate 12V Pump & Visible Liquid Pipe Flow
+    const t2 = window.setTimeout(() => {
+      this.pumpState = 'ON';
+      this.relayState = 'ON';
+      this.workflowState = {
+        ...this.workflowState,
+        step: 'PIPE_FLOWING',
+        stepIndex: 10,
+        pumpRunning: true,
+        isFlowing: true,
+        statusMessage: `12V Diaphragm Pump: ON. Liquid travelling through Pipe ${trtInfo.valveNum}: ${targetTank.label} → Valve ${trtInfo.valveNum} → Manifold → Nozzle ${trtInfo.nozzleNum}.`,
+      };
+      this.scene.robotRefs?.plumbing?.setPumpState('ON');
+      this.scene.robotRefs?.plumbing?.setPipeFlow(trtInfo.valveNum, true);
+      this.addLog('TREATMENT', `[STEP 7 & 8] 12V Pump: ON. Fluid flowing through Pipe ${trtInfo.valveNum}: ${targetTank.label} → Valve ${trtInfo.valveNum} → Manifold → Nozzle ${trtInfo.nozzleNum}.`);
+    }, 550);
+    this.deliveryTimeouts.push(t2);
+
+    // STEP 9 & 10 (T = 1200ms): Liquid Reaches Nozzle & Spray Hits Target Plant
+    const t3 = window.setTimeout(() => {
+      this.sprayActive = true;
+      this.workflowState = {
+        ...this.workflowState,
+        step: 'NOZZLE_SPRAYING',
+        stepIndex: 12,
+        activeNozzleId: trtInfo.nozzleNum,
+        isSpraying: true,
+        statusMessage: `Liquid reached Nozzle ${trtInfo.nozzleNum}. Precision targeted spray active on ${plant.id}.`,
+      };
+      this.scene.activateTreatmentSpray(plant, trtInfo.nozzleNum, trtInfo.valveNum);
+      this.addLog('TREATMENT', `[STEP 9 & 10] Nozzle ${trtInfo.nozzleNum}: ACTIVE. Atomizing micro-pulse directed exclusively at ${plant.id}.`);
+    }, 1250);
+    this.deliveryTimeouts.push(t3);
+
+    // STEP 11, 12, 13 (T = 3250ms): Spray Stops, Valve Closes, Pump Stops
+    const pulseEndMs = 1250 + Math.round(durationSec * 1000);
+    const t4 = window.setTimeout(() => {
+      this.sprayActive = false;
+      this.pumpState = 'OFF';
+      this.relayState = 'OFF';
+      this.scene.deactivateSpray();
+      this.scene.robotRefs?.plumbing?.setPipeFlow(trtInfo.valveNum, false);
+      this.scene.robotRefs?.plumbing?.setValveState(trtInfo.valveNum, 'CLOSED');
+      this.scene.robotRefs?.plumbing?.setPumpState('OFF');
+      this.tanks[trtInfo.tankId].valveState = 'CLOSED';
+
+      this.workflowState = {
+        ...this.workflowState,
+        step: 'VALVE_CLOSED',
+        stepIndex: 14,
+        pumpRunning: false,
+        isFlowing: false,
+        isSpraying: false,
+        statusMessage: `Target spray complete. Valve ${trtInfo.valveNum}: CLOSED. 12V Pump: OFF.`,
+      };
+      this.addLog('TREATMENT', `[STEP 11, 12, 13] Spray pulse ended. Valve ${trtInfo.valveNum}: CLOSED. 12V Pump: OFF.`);
+    }, pulseEndMs);
+    this.deliveryTimeouts.push(t4);
+
+    // STEP 14 & 15 (T = 3600ms): Plant State -> TREATED, Inventory Decremented, Event Logged
+    const completeMs = pulseEndMs + 350;
+    const t5 = window.setTimeout(() => {
+      // 1. Plant Transition to TREATED
       this.scene.updatePlantState(plant.id, 'TREATED');
       plant.state = 'TREATED';
       plant.healthScore = Math.min(96, plant.healthScore + 45);
       this.scene.updateTargetReticle(plant);
-      if (!plant.treatmentHistory) plant.treatmentHistory = [];
-      plant.treatmentHistory.push({
-        timestamp: new Date().toLocaleTimeString(),
-        action: plant.disease?.recommendedTreatment || 'Precision pulse fungicide',
-        dosageMl: doseMl,
-        operator: operatorName,
-        notes: 'Targeted micro-pulse application verified. Reinspection scheduled.',
-      });
+
+      // 2. Decrement selected tank inventory exactly
+      targetTank.currentMl = Math.max(0, targetTank.currentMl - doseMl);
+      targetTank.levelPct = Number(((targetTank.currentMl / targetTank.capacityMl) * 100).toFixed(1));
+      this.scene.robotRefs?.plumbing?.setTankLevel(trtInfo.valveNum, targetTank.levelPct);
 
       this.totalChemicalUsedMl += doseMl;
       this.totalTreatedPlantsCount++;
 
-      // Log structured spray event in carbon intelligence engine
+      // 3. Treatment History Record
+      const eventRecord: TreatmentEventRecord = {
+        id: `TRT-EVT-${Date.now()}`,
+        plantId: plant.id,
+        crop: plant.cropType,
+        disease: plant.disease?.name || 'Pathology',
+        confidence: plant.disease?.confidence || 0.94,
+        requiredTreatment: trtInfo.requiredTreatment,
+        tankUsed: targetTank.label,
+        valveUsed: `Valve ${trtInfo.valveNum}`,
+        nozzleUsed: `Nozzle ${trtInfo.nozzleNum}`,
+        sprayDurationSec: durationSec,
+        estimatedVolumeMl: doseMl,
+        timestamp: new Date().toLocaleTimeString(),
+        status: 'COMPLETED',
+        operator: operatorName,
+      };
+      this.treatmentHistory.unshift(eventRecord);
+
+      if (!plant.treatmentHistory) plant.treatmentHistory = [];
+      plant.treatmentHistory.push({
+        timestamp: eventRecord.timestamp,
+        action: `${trtInfo.requiredTreatment} via ${targetTank.label}`,
+        dosageMl: doseMl,
+        operator: operatorName,
+        notes: `Targeted micro-pulse application (${durationSec}s). Nozzle ${trtInfo.nozzleNum}. Status: TREATED.`,
+      });
+
+      // 4. Update Environmental Impact / Carbon Engine
       const currentZone = this.getZoneAtPosition(this.scene.robotX, this.scene.robotZ);
       carbonCalculator.recordSprayEvent({
         plantId: plant.id,
         zoneId: currentZone.id,
-        durationSec: 2.5,
+        durationSec,
         operator: operatorName,
         doseMl,
-        chemicalProduct: plant.disease?.chemicalProduct,
+        chemicalProduct: targetTank.chemicalProduct,
       });
+
+      this.workflowState = {
+        ...this.workflowState,
+        step: 'COMPLETED',
+        stepIndex: 15,
+        isCompleted: true,
+        statusMessage: `TREATMENT COMPLETE: ${plant.id} is now TREATED. Delivered ${doseMl} mL (ESTIMATED). ${targetTank.label} level: ${targetTank.levelPct}% (${targetTank.currentMl.toFixed(0)} mL).`,
+      };
 
       this.addLog(
         'TREATMENT',
-        `Pulse complete: Applied ${doseMl} mL to ${plant.id}. Plant status: TREATED (Follow-up required).`
+        `[STEP 14 & 15] ${plant.id} TREATED. Delivered: ${doseMl} mL (ESTIMATED) ${targetTank.chemicalProduct}. Inventory: ${targetTank.levelPct}% (${targetTank.currentMl.toFixed(0)} mL). Avoided CO2e metrics updated.`
       );
-    }, 2500);
+    }, completeMs);
+    this.deliveryTimeouts.push(t5);
 
     return true;
   }
 
   public deactivateSpray() {
+    this.deliveryTimeouts.forEach((t) => window.clearTimeout(t));
+    this.deliveryTimeouts = [];
     if (this.sprayTimer) {
       window.clearTimeout(this.sprayTimer);
       this.sprayTimer = null;
@@ -307,6 +628,66 @@ export class SimulatorManager {
     this.relayState = 'OFF';
     this.sprayActive = false;
     this.scene.deactivateSpray();
+    [1, 2, 3].forEach((n) => {
+      this.scene.robotRefs?.plumbing?.setPipeFlow(n as 1 | 2 | 3, false);
+      this.scene.robotRefs?.plumbing?.setValveState(n as 1 | 2 | 3, 'CLOSED');
+    });
+    this.scene.robotRefs?.plumbing?.setPumpState('OFF');
+  }
+
+  public refillTanks() {
+    this.tanks.TANK_1.currentMl = 680.0;
+    this.tanks.TANK_1.levelPct = 68.0;
+    this.tanks.TANK_2.currentMl = 336.0;
+    this.tanks.TANK_2.levelPct = 42.0;
+    this.tanks.TANK_3.currentMl = 360.0;
+    this.tanks.TANK_3.levelPct = 30.0;
+
+    [1, 2, 3].forEach((n) => {
+      this.scene.robotRefs?.plumbing?.setTankLevel(
+        n as 1 | 2 | 3,
+        this.tanks[`TANK_${n}` as 'TANK_1' | 'TANK_2' | 'TANK_3'].levelPct
+      );
+    });
+
+    this.addLog('TREATMENT', 'All 3 treatment tanks refilled and verified ready.');
+    if (this.detectedPlant) {
+      this.updateWorkflowForTarget(this.detectedPlant);
+    }
+  }
+
+  public runTreatmentDemo(): boolean {
+    // 1. Locate Plant #023 (or fallback to nearest diseased crop)
+    const plants = this.scene.getAllPlants();
+    let targetPlant = plants.find((p) => p.id === 'Plant #023' || p.id === 'PLANT-#023');
+    if (!targetPlant) {
+      targetPlant = plants.find((p) => p.state === 'DISEASED');
+    }
+    if (!targetPlant) {
+      this.addLog('ALERT', 'Demo aborted: No diseased plant found in field.');
+      return false;
+    }
+
+    // 2. Position robot directly adjacent to target plant in driving furrow (within 1.4m range)
+    this.scene.robotX = 0.0;
+    this.scene.robotZ = 2.0;
+    this.scene.robotHeading = 0.0; // Heading North, plant is to the left at X: -1.5, Z: 2.0
+    this.scene.syncRobotTransform();
+
+    // 3. Acquire plant in camera view
+    this.detectedPlant = targetPlant;
+    this.scene.updateTargetReticle(targetPlant);
+    this.updateWorkflowForTarget(targetPlant);
+
+    this.addLog('DETECTION', `DEMO: Rover positioned adjacent to ${targetPlant.id}. Virtual camera acquired diseased canopy.`);
+    this.addLog('INFO', `DEMO AI DIAGNOSIS: Crop: Tomato, Disease: Early Blight, Confidence: 94%, Severity: Moderate.`);
+
+    // 4. Automatically trigger approval and run 15-step sequence
+    window.setTimeout(() => {
+      this.approveAndSpray('Swayam-Lead (Demo)');
+    }, 600);
+
+    return true;
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -419,6 +800,8 @@ export class SimulatorManager {
       sprayActive: this.sprayActive,
       sprayTargetPlantId: this.sprayActive && this.detectedPlant ? this.detectedPlant.id : null,
       detectedPlant: this.detectedPlant,
+      tanks: this.tanks,
+      treatmentWorkflow: this.workflowState,
     };
 
     if (this.onTelemetryUpdate) {

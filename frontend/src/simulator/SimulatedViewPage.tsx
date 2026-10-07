@@ -45,7 +45,10 @@ import {
   Maximize2,
   Eye,
   Sliders,
-  ChevronDown
+  ChevronDown,
+  Check,
+  Play,
+  RefreshCw,
 } from 'lucide-react';
 import { FarmScene, SimCameraMode } from './FarmScene';
 import { SimulatorManager, SIMULATOR_ZONES } from './SimulatorManager';
@@ -56,6 +59,9 @@ import {
   SimulatorLogEvent,
   SimulatorTelemetry,
   CarbonImpactModel,
+  ChemicalTankState,
+  TreatmentWorkflowState,
+  TreatmentEventRecord,
 } from './types';
 import { carbonCalculator } from './CarbonEngine';
 import { buzzerAudio } from './BuzzerAudio';
@@ -420,6 +426,117 @@ export const SimulatedViewPage: React.FC = () => {
   const isAnyObstacle = isLeftObstacle || isCenterObstacle || isRightObstacle;
   const isAnyWarning = usLeft <= SAFETY_THRESHOLDS.WARNING_CM || usCenter <= SAFETY_THRESHOLDS.WARNING_CM || usRight <= SAFETY_THRESHOLDS.WARNING_CM;
 
+  // Multi-Tank Inventory & Delivery Workflow State
+  const tanks = telemetry?.tanks || managerRef.current?.tanks || {
+    TANK_1: { id: 'TANK_1', tankNumber: 1, label: 'Tank 1', treatmentName: 'Treatment A', chemicalProduct: 'Copper Hydroxide 77% Solution', chemicalClass: 'Inorganic Copper Fungicide (FRAC M01)', capacityMl: 1000, currentMl: 680, levelPct: 68, valveState: 'CLOSED', colorHex: 0x06b6d4, colorCss: '#06b6d4', minSafeLevelMl: 60, flowRateMlPerSec: 20 },
+    TANK_2: { id: 'TANK_2', tankNumber: 2, label: 'Tank 2', treatmentName: 'Treatment B', chemicalProduct: 'Cold-Pressed Bio-Neem Solution', chemicalClass: 'Botanical Bio-Pesticide (Azadirachtin)', capacityMl: 800, currentMl: 336, levelPct: 42, valveState: 'CLOSED', colorHex: 0x10b981, colorCss: '#10b981', minSafeLevelMl: 50, flowRateMlPerSec: 20 },
+    TANK_3: { id: 'TANK_3', tankNumber: 3, label: 'Tank 3', treatmentName: 'Treatment C', chemicalProduct: 'Clean Rinsing & Mineral Protectant', chemicalClass: 'Solvent / Micronutrient Wash', capacityMl: 1200, currentMl: 0, levelPct: 0, valveState: 'CLOSED', colorHex: 0x38bdf8, colorCss: '#38bdf8', minSafeLevelMl: 80, flowRateMlPerSec: 20 },
+  };
+
+  const workflow = telemetry?.treatmentWorkflow || managerRef.current?.workflowState || {
+    step: 'IDLE',
+    stepIndex: 0,
+    totalSteps: 15,
+    activeTankId: null,
+    activeValveId: null,
+    activeNozzleId: null,
+    pumpRunning: false,
+    flowProgress: 0,
+    targetPlant: null,
+    requiredTreatment: null,
+    sourceTankLabel: null,
+    inventoryAvailable: false,
+    estimatedVolumeMl: 40,
+    durationSec: 2.0,
+    inRange: false,
+    distanceMeters: 0,
+    statusMessage: 'Scanning crop furrows. Approach canopy to acquire target.',
+    isFlowing: false,
+    isSpraying: false,
+    isCompleted: false,
+  };
+
+  const targetDistMeters = targetPlant && sceneRef.current ? sceneRef.current.getDistanceToPlant(targetPlant) : 0;
+  const isTargetInRange = targetDistMeters <= 2.2;
+  const targetTrtInfo = targetPlant && managerRef.current ? managerRef.current.getTreatmentForPlant(targetPlant) : null;
+  const selectedTank = targetTrtInfo ? tanks[targetTrtInfo.tankId] : null;
+  const isSelectedTankAvail = selectedTank ? selectedTank.currentMl >= (targetTrtInfo?.recommendedDoseMl || 40) : false;
+
+  const treatmentProcessSteps = [
+    {
+      stepNum: 1,
+      title: 'Disease Detected',
+      isDone: !!targetPlant && (targetPlant.state === 'DISEASED' || targetPlant.state === 'WARNING' || targetPlant.state === 'TREATED'),
+      isActive: false,
+    },
+    {
+      stepNum: 2,
+      title: 'Disease Identified',
+      isDone: !!targetPlant?.disease || targetPlant?.state === 'TREATED',
+      isActive: false,
+    },
+    {
+      stepNum: 3,
+      title: 'Treatment Selected',
+      isDone: !!targetTrtInfo || targetPlant?.state === 'TREATED',
+      isActive: false,
+    },
+    {
+      stepNum: 4,
+      title: 'Inventory Available',
+      isDone: isSelectedTankAvail || targetPlant?.state === 'TREATED',
+      isActive: !isSelectedTankAvail && !!targetPlant && targetPlant.state !== 'TREATED',
+    },
+    {
+      stepNum: 5,
+      title: 'Target In Range (≤ 2.2m)',
+      isDone: isTargetInRange || targetPlant?.state === 'TREATED',
+      isActive: !isTargetInRange && isSelectedTankAvail && !!targetPlant && targetPlant.state !== 'TREATED',
+    },
+    {
+      stepNum: 6,
+      title: 'Farmer Approved',
+      isDone: workflow.stepIndex >= 6 || targetPlant?.state === 'TREATED',
+      isActive: workflow.stepIndex === 5 && isTargetInRange && isSelectedTankAvail,
+    },
+    {
+      stepNum: 7,
+      title: `${targetTrtInfo ? tanks[targetTrtInfo.tankId].label : 'Tank 2'} Selected`,
+      isDone: workflow.stepIndex >= 7 || targetPlant?.state === 'TREATED',
+      isActive: workflow.stepIndex === 6,
+    },
+    {
+      stepNum: 8,
+      title: `Valve ${targetTrtInfo?.valveNum || 2} Open`,
+      isDone: workflow.stepIndex >= 8 || targetPlant?.state === 'TREATED',
+      isActive: workflow.stepIndex === 7 || workflow.step === 'VALVE_OPENED',
+    },
+    {
+      stepNum: 9,
+      title: '12V Diaphragm Pump Active',
+      isDone: workflow.stepIndex >= 9 || targetPlant?.state === 'TREATED',
+      isActive: workflow.pumpRunning,
+    },
+    {
+      stepNum: 10,
+      title: `Pipe ${targetTrtInfo?.valveNum || 2} Liquid Flow`,
+      isDone: workflow.stepIndex >= 10 || targetPlant?.state === 'TREATED',
+      isActive: workflow.isFlowing,
+    },
+    {
+      stepNum: 11,
+      title: `Nozzle ${targetTrtInfo?.nozzleNum || 2} Spraying Target`,
+      isDone: workflow.stepIndex >= 11 || targetPlant?.state === 'TREATED',
+      isActive: workflow.isSpraying,
+    },
+    {
+      stepNum: 12,
+      title: 'Treatment Complete',
+      isDone: targetPlant?.state === 'TREATED' || workflow.isCompleted,
+      isActive: false,
+    },
+  ];
+
   return (
     <div style={{
       display: 'flex',
@@ -458,11 +575,28 @@ export const SimulatedViewPage: React.FC = () => {
             <Leaf size={22} color="#fff" />
           </div>
           <div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
-              Simulated Farm View
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
+                Simulated Farm View
+              </div>
+              <span style={{
+                fontSize: '0.62rem',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: 'var(--sky-400)',
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }} title="Simulation mode: Digital twin mirrors hardware plumbing & decision engine">
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--sky-400)', display: 'inline-block' }} />
+                SIMULATION MODE
+              </span>
             </div>
             <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
-              Interactive simulation of AgriGuard in a realistic farm environment
+              Interactive simulation of AgriGuard prototype in a realistic agricultural field
             </div>
           </div>
         </div>
@@ -575,6 +709,53 @@ export const SimulatedViewPage: React.FC = () => {
           >
             <Camera size={13} />
             <span>Reset Cam</span>
+          </button>
+
+          {/* 1-Click Realistic Treatment Demo Button */}
+          <button
+            type="button"
+            onClick={() => managerRef.current?.runTreatmentDemo()}
+            className="btn btn-primary"
+            style={{
+              padding: '0.4rem 0.85rem',
+              fontSize: '0.78rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              color: '#fff',
+              fontWeight: 800,
+              boxShadow: '0 0 14px rgba(16, 185, 129, 0.45)',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+            title="Auto-position rover at Plant #023 and execute the complete 15-step physical treatment delivery sequence"
+          >
+            <Sparkles size={14} />
+            <span>1-Click Treatment Demo</span>
+          </button>
+
+          {/* Refill Tanks Button */}
+          <button
+            type="button"
+            onClick={() => managerRef.current?.refillTanks()}
+            className="btn btn-outline"
+            style={{
+              padding: '0.4rem 0.7rem',
+              fontSize: '0.76rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              borderRadius: '8px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#fff',
+              fontWeight: 600
+            }}
+            title="Restore all 3 treatment tanks to default onboard inventory levels"
+          >
+            <RotateCcw size={13} />
+            <span>Refill Tanks</span>
           </button>
 
           {/* Reset Field Button */}
@@ -870,13 +1051,29 @@ export const SimulatedViewPage: React.FC = () => {
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
                     Health Score: <strong style={{ color: targetPlant.healthScore > 80 ? 'var(--emerald-400)' : targetPlant.healthScore > 50 ? 'var(--amber-400)' : 'var(--rose-400)' }}>{targetPlant.healthScore}%</strong>
                   </div>
+                  {targetTrtInfo && (
+                    <div style={{ fontSize: '0.66rem', color: 'var(--sky-400)', marginTop: '2px', fontWeight: 700 }}>
+                      Rx: {targetTrtInfo.requiredTreatment} ({selectedTank?.label})
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Status Pill */}
-              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                <span className={`status-pill ${targetPlant.state === 'DISEASED' ? 'status-danger' : targetPlant.state === 'WARNING' ? 'status-warning' : 'status-online'}`} style={{ fontSize: '0.64rem', padding: '0.15rem 0.5rem', fontWeight: 800 }}>
+              {/* Status Pill & Range Indicator */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className={`status-pill ${targetPlant.state === 'DISEASED' ? 'status-danger' : targetPlant.state === 'WARNING' ? 'status-warning' : targetPlant.state === 'TREATED' ? 'status-online' : 'status-online'}`} style={{ fontSize: '0.64rem', padding: '0.15rem 0.5rem', fontWeight: 800 }}>
                   {targetPlant.state}
+                </span>
+
+                <span style={{
+                  fontSize: '0.63rem',
+                  fontWeight: 800,
+                  color: isTargetInRange ? 'var(--emerald-400)' : 'var(--rose-400)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}>
+                  {isTargetInRange ? `✓ IN RANGE (${targetDistMeters.toFixed(1)}m)` : `⚠ OUT OF RANGE (${targetDistMeters.toFixed(1)}m)`}
                 </span>
               </div>
 
@@ -1075,6 +1272,194 @@ export const SimulatedViewPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Card 4B: Treatment Process & Onboard Inventory (Live Status HUD) */}
+        <div style={{
+          position: 'absolute',
+          top: '254px',
+          right: '16px',
+          width: '275px',
+          maxHeight: '510px',
+          overflowY: 'auto',
+          background: 'rgba(11, 19, 32, 0.90)',
+          backdropFilter: 'blur(14px)',
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          padding: '0.85rem',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.65rem'
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+              <Droplet size={15} color="var(--emerald-400)" />
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Treatment Delivery</span>
+            </div>
+            <span style={{
+              fontSize: '0.58rem',
+              padding: '1px 6px',
+              borderRadius: '4px',
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: 'var(--sky-400)',
+              fontWeight: 800
+            }}>
+              SIMULATION
+            </span>
+          </div>
+
+          {/* Section 1: Treatment Inventory (Requirement 2 & 15) */}
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.6rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+              <span style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--text-dim)', letterSpacing: '0.05em' }}>TREATMENT INVENTORY</span>
+              <button
+                type="button"
+                onClick={() => managerRef.current?.refillTanks()}
+                style={{
+                  fontSize: '0.60rem',
+                  color: 'var(--emerald-400)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  padding: 0
+                }}
+              >
+                Refill
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              {/* Tank 1 */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', marginBottom: '2px' }}>
+                  <span style={{ color: '#fff', fontWeight: 700 }}>Tank 1: {tanks.TANK_1.treatmentName}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{tanks.TANK_1.levelPct}% ({tanks.TANK_1.currentMl.toFixed(0)} mL)</span>
+                </div>
+                <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: `${tanks.TANK_1.levelPct}%`, height: '100%', background: '#06b6d4', transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                  <span>Valve 1: <strong style={{ color: tanks.TANK_1.valveState === 'OPEN' ? 'var(--emerald-400)' : 'var(--text-muted)' }}>{tanks.TANK_1.valveState}</strong></span>
+                  <span>Copper Hydroxide</span>
+                </div>
+              </div>
+
+              {/* Tank 2 */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', marginBottom: '2px' }}>
+                  <span style={{ color: '#fff', fontWeight: 700 }}>Tank 2: {tanks.TANK_2.treatmentName}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>{tanks.TANK_2.levelPct}% ({tanks.TANK_2.currentMl.toFixed(0)} mL)</span>
+                </div>
+                <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: `${tanks.TANK_2.levelPct}%`, height: '100%', background: '#10b981', transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                  <span>Valve 2: <strong style={{ color: tanks.TANK_2.valveState === 'OPEN' ? 'var(--emerald-400)' : 'var(--text-muted)' }}>{tanks.TANK_2.valveState}</strong></span>
+                  <span>Bio-Neem Solution</span>
+                </div>
+              </div>
+
+              {/* Tank 3 */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', marginBottom: '2px' }}>
+                  <span style={{ color: '#fff', fontWeight: 700 }}>Tank 3: {tanks.TANK_3.treatmentName}</span>
+                  <span style={{ color: tanks.TANK_3.levelPct === 0 ? 'var(--rose-400)' : 'var(--text-muted)', fontWeight: tanks.TANK_3.levelPct === 0 ? 800 : 500 }}>
+                    {tanks.TANK_3.levelPct}% {tanks.TANK_3.levelPct === 0 ? '[EMPTY]' : `(${tanks.TANK_3.currentMl.toFixed(0)} mL)`}
+                  </span>
+                </div>
+                <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(tanks.TANK_3.levelPct, 2)}%`, height: '100%', background: tanks.TANK_3.levelPct === 0 ? '#ef4444' : '#38bdf8', transition: 'width 0.4s ease' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.58rem', color: 'var(--text-dim)', marginTop: '2px' }}>
+                  <span>Valve 3: <strong style={{ color: tanks.TANK_3.valveState === 'OPEN' ? 'var(--emerald-400)' : 'var(--text-muted)' }}>{tanks.TANK_3.valveState}</strong></span>
+                  <span>Mineral Wash</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Step-by-Step Treatment Process (Requirement 14) */}
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.6rem', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontSize: '0.66rem', fontWeight: 800, color: 'var(--text-dim)', letterSpacing: '0.05em', marginBottom: '0.45rem' }}>
+              TREATMENT PROCESS
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.22rem' }}>
+              {treatmentProcessSteps.map((s) => (
+                <div
+                  key={s.stepNum}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    fontSize: '0.64rem',
+                    color: s.isDone ? 'var(--emerald-400)' : s.isActive ? 'var(--amber-300)' : 'rgba(255,255,255,0.3)',
+                    fontWeight: s.isDone || s.isActive ? 700 : 500,
+                    lineHeight: 1.25
+                  }}
+                >
+                  <span style={{ fontSize: '0.72rem', width: '10px', textAlign: 'center', flexShrink: 0 }}>
+                    {s.isDone ? '✓' : s.isActive ? '→' : '○'}
+                  </span>
+                  <span>{s.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section 3: Live Hardware Actuation State */}
+          <div style={{
+            background: workflow.isSpraying
+              ? 'rgba(16, 185, 129, 0.15)'
+              : workflow.pumpRunning
+              ? 'rgba(56, 189, 248, 0.15)'
+              : 'rgba(255, 255, 255, 0.03)',
+            borderRadius: '8px',
+            padding: '0.55rem',
+            border: `1px solid ${workflow.isSpraying ? 'rgba(16, 185, 129, 0.4)' : workflow.pumpRunning ? 'rgba(56, 189, 248, 0.4)' : 'rgba(255, 255, 255, 0.06)'}`
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '0.25rem' }}>
+              <span>Pump: <strong style={{ color: workflow.pumpRunning ? 'var(--sky-400)' : 'var(--text-muted)' }}>{workflow.pumpRunning ? 'ON' : 'OFF'}</strong></span>
+              <span>Flow: <strong>20 mL/s</strong> <span style={{ color: 'var(--amber-400)', fontSize: '0.58rem' }}>[EST.]</span></span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+              <span>Valve: <strong style={{ color: selectedTank?.valveState === 'OPEN' ? 'var(--emerald-400)' : 'var(--text-muted)' }}>{selectedTank?.valveState || 'CLOSED'}</strong></span>
+              <span>Nozzle: <strong style={{ color: workflow.isSpraying ? 'var(--emerald-400)' : 'var(--text-muted)' }}>{workflow.isSpraying ? 'ACTIVE' : 'IDLE'}</strong></span>
+            </div>
+            <div style={{ fontSize: '0.60rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.25, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '0.25rem' }}>
+              {workflow.statusMessage}
+            </div>
+          </div>
+
+          {/* Fast Action Trigger */}
+          <button
+            type="button"
+            onClick={() => managerRef.current?.runTreatmentDemo()}
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              padding: '0.45rem',
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.4rem',
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              boxShadow: '0 0 12px rgba(16, 185, 129, 0.35)',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <Sparkles size={13} />
+            <span>1-Click Treatment Demo</span>
+          </button>
         </div>
       </div>
 
@@ -1453,31 +1838,151 @@ export const SimulatedViewPage: React.FC = () => {
           zIndex: 100
         }}>
           <div className="glass-panel" style={{
-            width: '520px',
+            width: '540px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             padding: '1.5rem',
             borderRadius: '16px',
             border: '1px solid rgba(16, 185, 129, 0.4)',
             background: '#0b1320',
-            boxShadow: '0 0 35px rgba(16, 185, 129, 0.25)'
+            boxShadow: '0 0 40px rgba(16, 185, 129, 0.25)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem', marginBottom: '0.85rem' }}>
-              <Sparkles size={20} color="var(--emerald-400)" />
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-                Farmer Approval Gate: Precision Spray
-              </h3>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
+                <Sparkles size={20} color="var(--emerald-400)" />
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                  Farmer Approval Gate: Treatment Delivery
+                </h3>
+              </div>
+              <span style={{
+                fontSize: '0.62rem',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                background: 'rgba(56, 189, 248, 0.15)',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                color: 'var(--sky-400)',
+                fontWeight: 800
+              }}>
+                SIMULATION MODE
+              </span>
             </div>
 
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.4 }}>
-              AgriGuard AI will <strong>never spray chemicals automatically</strong> without human-in-the-loop verification. Please authorize targeted pulse spray execution.
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.45 }}>
+              AgriGuard AI will <strong>never spray chemicals automatically</strong> without human verification. Target alignment, tank inventory, and plumbing path must be confirmed.
             </p>
 
-            <div style={{ background: 'rgba(255,255,255,0.04)', padding: '0.85rem', borderRadius: '10px', marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.76rem', color: '#fff', fontWeight: 700, marginBottom: '0.35rem' }}>Target Specifications:</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Plant Target: <strong style={{ color: '#fff' }}>{targetPlant.id}</strong></div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Identified Pathology: <strong style={{ color: 'var(--amber-400)' }}>{targetPlant.disease?.name}</strong></div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Recommended Dosage: <strong style={{ color: 'var(--emerald-400)' }}>{targetPlant.disease?.recommendedDoseMl || 40} mL</strong> micro-pulse</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Formulation: <strong style={{ color: 'var(--sky-400)' }}>{targetPlant.disease?.chemicalProduct || 'Copper Hydroxide'}</strong></div>
+            {/* Technical Specification Grid (Sections 3, 4, 5, 11, 16) */}
+            <div style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              padding: '0.9rem',
+              borderRadius: '10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.55rem',
+              marginBottom: '1rem',
+              fontSize: '0.74rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>TARGET:</span>
+                <strong style={{ color: '#fff' }}>{targetPlant.id} (Crop: {targetPlant.cropType || 'Tomato'}, Row {targetPlant.row})</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>DISEASE:</span>
+                <span>
+                  <strong style={{ color: 'var(--amber-400)' }}>{targetPlant.disease?.name || 'Pathology'}</strong>
+                  <span style={{ color: 'var(--text-muted)' }}> (Conf: {((targetPlant.disease?.confidence || 0.94) * 100).toFixed(0)}%, {targetPlant.disease?.severity || 'Moderate'})</span>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>REQUIRED TREATMENT:</span>
+                <span>
+                  <strong style={{ color: 'var(--emerald-400)' }}>{targetTrtInfo?.requiredTreatment || 'Treatment B'}</strong>
+                  <span style={{ color: 'var(--text-muted)' }}> ({selectedTank?.chemicalProduct || 'Bio-Neem Solution'})</span>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>SOURCE:</span>
+                <strong style={{ color: 'var(--sky-400)' }}>
+                  {selectedTank?.label || 'Tank 2'} → Valve {targetTrtInfo?.valveNum || 2} → Nozzle {targetTrtInfo?.nozzleNum || 2}
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>INVENTORY STATUS:</span>
+                <strong style={{ color: isSelectedTankAvail ? 'var(--emerald-400)' : 'var(--rose-400)' }}>
+                  {isSelectedTankAvail ? `AVAILABLE (${selectedTank?.levelPct}% / ${selectedTank?.currentMl.toFixed(0)} mL remaining)` : `EMPTY (${selectedTank?.currentMl.toFixed(0)} mL) — UNAVAILABLE`}
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>TARGET ALIGNMENT:</span>
+                <strong style={{ color: isTargetInRange ? 'var(--emerald-400)' : 'var(--rose-400)' }}>
+                  {isTargetInRange ? `TARGET IN RANGE (${targetDistMeters.toFixed(2)}m <= 2.2m)` : `TARGET OUT OF RANGE (${targetDistMeters.toFixed(2)}m > 2.2m)`}
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.35rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700 }}>ESTIMATED USAGE:</span>
+                <span>
+                  <strong style={{ color: '#fff' }}>{targetTrtInfo?.recommendedDoseMl || 40} mL</strong>
+                  <span style={{ color: 'var(--amber-400)', fontWeight: 800, marginLeft: '4px' }}>[ESTIMATED]</span>
+                  <span style={{ color: 'var(--text-muted)' }}> (20 mL/s × 2.0s duration)</span>
+                </span>
+              </div>
+
+              <div style={{ paddingTop: '0.2rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '2px' }}>PHYSICAL PATH:</span>
+                <div style={{ color: 'var(--emerald-300)', fontSize: '0.70rem', fontFamily: 'monospace' }}>
+                  {selectedTank?.label} → Valve {targetTrtInfo?.valveNum || 2} [OPEN] → 12V Diaphragm Pump [ON] → Pipe {targetTrtInfo?.valveNum || 2} Flow → Nozzle {targetTrtInfo?.nozzleNum || 2} → {targetPlant.id}
+                </div>
+              </div>
             </div>
+
+            {/* Warning alerts if blocked */}
+            {!isTargetInRange && (
+              <div style={{
+                background: 'rgba(244, 63, 94, 0.15)',
+                border: '1px solid var(--rose-500)',
+                borderRadius: '8px',
+                padding: '0.55rem 0.75rem',
+                marginBottom: '1rem',
+                fontSize: '0.72rem',
+                color: 'var(--rose-300)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <AlertTriangle size={16} color="var(--rose-400)" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>TARGET OUT OF RANGE ({targetDistMeters.toFixed(2)}m):</strong> Spray interlock active. Position robot closer (within 2.2m) along furrow before authorizing treatment.
+                </div>
+              </div>
+            )}
+
+            {!isSelectedTankAvail && (
+              <div style={{
+                background: 'rgba(244, 63, 94, 0.15)',
+                border: '1px solid var(--rose-500)',
+                borderRadius: '8px',
+                padding: '0.55rem 0.75rem',
+                marginBottom: '1rem',
+                fontSize: '0.72rem',
+                color: 'var(--rose-300)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <AlertTriangle size={16} color="var(--rose-400)" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong>REQUIRED TREATMENT UNAVAILABLE:</strong> {selectedTank?.label} ({selectedTank?.treatmentName}) is empty. Farmer action required: Refill chemical tank to enable spray. DO NOT SPRAY.
+                </div>
+              </div>
+            )}
 
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '0.35rem' }}>
@@ -1505,19 +2010,29 @@ export const SimulatedViewPage: React.FC = () => {
                 type="button"
                 onClick={() => setIsApprovalModalOpen(false)}
                 className="btn btn-outline"
-                style={{ padding: '0.55rem 1rem', fontSize: '0.78rem' }}
+                style={{ padding: '0.55rem 1.15rem', fontSize: '0.78rem' }}
               >
-                Cancel
+                REJECT
               </button>
 
               <button
                 type="button"
+                disabled={!isTargetInRange || !isSelectedTankAvail}
                 onClick={handleApproveSpray}
                 className="btn btn-primary"
-                style={{ padding: '0.55rem 1.25rem', fontSize: '0.78rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.45rem' }}
+                style={{
+                  padding: '0.55rem 1.35rem',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  opacity: (!isTargetInRange || !isSelectedTankAvail) ? 0.5 : 1,
+                  cursor: (!isTargetInRange || !isSelectedTankAvail) ? 'not-allowed' : 'pointer'
+                }}
               >
                 <Sparkles size={15} />
-                AUTHORIZE & SPRAY
+                APPROVE TREATMENT
               </button>
             </div>
           </div>
