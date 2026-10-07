@@ -55,7 +55,9 @@ import {
   SimulationMovementCommand,
   SimulatorLogEvent,
   SimulatorTelemetry,
+  CarbonImpactModel,
 } from './types';
+import { carbonCalculator } from './CarbonEngine';
 import { buzzerAudio } from './BuzzerAudio';
 import { SAFETY_THRESHOLDS } from '../digitalTwin/types';
 
@@ -79,6 +81,16 @@ export const SimulatedViewPage: React.FC = () => {
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState<boolean>(false);
   const [selectedPlant, setSelectedPlant] = useState<FarmPlant | null>(null);
+
+  // Carbon Intelligence State
+  const [carbonImpact, setCarbonImpact] = useState<CarbonImpactModel>(() => carbonCalculator.calculate());
+
+  useEffect(() => {
+    const unsub = carbonCalculator.subscribe((newImpact) => {
+      setCarbonImpact(newImpact);
+    });
+    return () => unsub();
+  }, []);
 
   // Initialize Simulator on Mount
   useEffect(() => {
@@ -1316,7 +1328,7 @@ export const SimulatedViewPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 7: Environmental Impact (Simulation) */}
+        {/* Card 7: Environmental Impact & Carbon Intelligence */}
         <div className="glass-panel" style={{
           padding: '0.85rem',
           borderRadius: '14px',
@@ -1324,29 +1336,70 @@ export const SimulatedViewPage: React.FC = () => {
           background: 'rgba(11, 19, 32, 0.85)',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          gap: '0.5rem'
         }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.45rem' }}>
-              <Leaf size={15} color="var(--emerald-400)" />
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Environmental Impact (Simulation)</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <Leaf size={15} color="var(--emerald-400)" />
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Environmental & Carbon Intelligence</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{
+                  fontSize: '0.58rem',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  color: 'var(--sky-400)',
+                  fontWeight: 800
+                }}>
+                  {carbonImpact.mode}
+                </span>
+                <button
+                  type="button"
+                  title="Run Deterministic 58% Reduction Benchmark (Section 30)"
+                  onClick={() => managerRef.current?.loadDeterministicBenchmark()}
+                  style={{
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    color: 'var(--emerald-400)',
+                    borderRadius: '4px',
+                    fontSize: '0.58rem',
+                    fontWeight: 700,
+                    padding: '2px 5px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Benchmark
+                </button>
+              </div>
             </div>
 
-            {/* Comparison Table */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr', gap: '0.5rem', fontSize: '0.68rem', marginBottom: '0.5rem' }}>
+            {/* Comparison Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1.25fr', gap: '0.5rem', fontSize: '0.68rem', marginBottom: '0.35rem' }}>
               <div>
-                <div style={{ color: 'var(--text-dim)', fontWeight: 700, marginBottom: '2px' }}>Conventional Approach</div>
-                <div style={{ color: 'var(--text-muted)' }}>Treatment Volume: <strong style={{ color: '#fff' }}>1000 mL</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Area Treated: <strong style={{ color: '#fff' }}>100 m²</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Estimated CO2e: <strong style={{ color: 'var(--rose-400)' }}>1.84 kg</strong></div>
+                <div style={{ color: 'var(--text-dim)', fontWeight: 700, marginBottom: '2px' }}>Conventional Baseline</div>
+                <div style={{ color: 'var(--text-muted)' }}>Baseline Spray: <strong style={{ color: '#fff' }}>{carbonImpact.baselineTreatmentVolumeMl.value.toFixed(0)} mL</strong></div>
+                <div style={{ color: 'var(--text-muted)' }}>Field Area: <strong style={{ color: '#fff' }}>{carbonImpact.totalFieldAreaM2.value.toFixed(0)} m²</strong></div>
+                <div style={{ color: 'var(--text-muted)' }}>
+                  CO2e: <strong style={{ color: carbonImpact.baselineFootprintKgCO2e.value !== null ? 'var(--rose-400)' : 'var(--text-dim)' }}>
+                    {carbonImpact.baselineFootprintKgCO2e.value !== null ? `${carbonImpact.baselineFootprintKgCO2e.value.toFixed(3)} kg` : 'Unconfigured'}
+                  </strong>
+                </div>
               </div>
 
               <div>
-                <div style={{ color: 'var(--emerald-400)', fontWeight: 700, marginBottom: '2px' }}>AgriGuard (Current Run)</div>
-                <div style={{ color: 'var(--text-muted)' }}>Treatment Volume: <strong style={{ color: 'var(--emerald-400)' }}>240 mL</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Area Treated: <strong style={{ color: 'var(--emerald-400)' }}>18 m²</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Robot Energy: <strong style={{ color: 'var(--sky-400)' }}>0.18 kWh</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Estimated CO2e: <strong style={{ color: 'var(--emerald-400)' }}>0.62 kg</strong></div>
+                <div style={{ color: 'var(--emerald-400)', fontWeight: 700, marginBottom: '2px' }}>AgriGuard Precision</div>
+                <div style={{ color: 'var(--text-muted)' }}>Targeted Spray: <strong style={{ color: 'var(--emerald-400)' }}>{carbonImpact.agriguardTreatmentVolumeMl.value.toFixed(0)} mL</strong></div>
+                <div style={{ color: 'var(--text-muted)' }}>Treated Area: <strong style={{ color: 'var(--emerald-400)' }}>{carbonImpact.treatedAreaM2.value.toFixed(1)} m² ({carbonImpact.precisionTreatmentRate.value.toFixed(0)}%)</strong></div>
+                <div style={{ color: 'var(--text-muted)' }}>Robot Energy: <strong style={{ color: 'var(--sky-400)' }}>{carbonImpact.robotEnergyKwh.value.toFixed(3)} kWh</strong></div>
+                <div style={{ color: 'var(--text-muted)' }}>
+                  CO2e: <strong style={{ color: carbonImpact.agriguardFootprintKgCO2e.value !== null ? 'var(--emerald-400)' : 'var(--text-dim)' }}>
+                    {carbonImpact.agriguardFootprintKgCO2e.value !== null ? `${carbonImpact.agriguardFootprintKgCO2e.value.toFixed(3)} kg` : 'Unconfigured'}
+                  </strong>
+                </div>
               </div>
             </div>
           </div>
@@ -1361,12 +1414,24 @@ export const SimulatedViewPage: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'space-between'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.74rem', fontWeight: 800, color: '#fff' }}>
-              <Leaf size={15} color="var(--emerald-400)" />
-              <span>Estimated Avoided CO2e</span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', fontWeight: 800, color: '#fff' }}>
+                <Leaf size={14} color="var(--emerald-400)" />
+                <span>Estimated Avoided CO2e</span>
+              </div>
+              <div style={{ fontSize: '0.58rem', color: 'var(--emerald-300)', marginTop: '1px' }}>
+                Chemical Saved: <strong>{carbonImpact.chemicalSavedMl.value.toFixed(0)} mL</strong> ({carbonImpact.chemicalReductionPercent.value.toFixed(1)}% Red.)
+              </div>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--emerald-400)' }}>
-              1.22 kg
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 900, color: 'var(--emerald-400)' }}>
+                {carbonImpact.estimatedAvoidedCO2eKg.value !== null ? `${carbonImpact.estimatedAvoidedCO2eKg.value.toFixed(3)} kg` : 'N/A'}
+              </div>
+              {carbonImpact.carbonReductionPercent.value !== null && (
+                <div style={{ fontSize: '0.58rem', color: 'var(--emerald-300)', fontWeight: 700 }}>
+                  ~{carbonImpact.carbonReductionPercent.value.toFixed(1)}% avoided
+                </div>
+              )}
             </div>
           </div>
         </div>

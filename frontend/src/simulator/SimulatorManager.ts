@@ -21,9 +21,10 @@ import {
   SimulationMovementCommand,
   SimulatorLogEvent,
   SimulatorTelemetry,
+  CarbonImpactModel,
 } from './types';
 import { buzzerAudio } from './BuzzerAudio';
-import { carbonCalculator } from './CarbonEngine';
+import { carbonCalculator, CarbonImpactCalculator } from './CarbonEngine';
 import { SAFETY_THRESHOLDS } from '../digitalTwin/types';
 
 // Pre-configured Field Zones
@@ -277,6 +278,17 @@ export class SimulatorManager {
       this.totalChemicalUsedMl += doseMl;
       this.totalTreatedPlantsCount++;
 
+      // Log structured spray event in carbon intelligence engine
+      const currentZone = this.getZoneAtPosition(this.scene.robotX, this.scene.robotZ);
+      carbonCalculator.recordSprayEvent({
+        plantId: plant.id,
+        zoneId: currentZone.id,
+        durationSec: 2.5,
+        operator: operatorName,
+        doseMl,
+        chemicalProduct: plant.disease?.chemicalProduct,
+      });
+
       this.addLog(
         'TREATMENT',
         `Pulse complete: Applied ${doseMl} mL to ${plant.id}. Plant status: TREATED (Follow-up required).`
@@ -308,6 +320,7 @@ export class SimulatorManager {
     // Track drive time for energy accounting
     if (Math.abs(this.scene.robotSpeed) > 0.02) {
       this.driveSecondsElapsed += deltaSec;
+      carbonCalculator.recordDriveTime(deltaSec);
     }
 
     // 1. Genuine 3D Ultrasonic Raycast Measurements
@@ -353,6 +366,7 @@ export class SimulatorManager {
       this.scene.updateTargetReticle(plantInFront);
       if (plantInFront) {
         if (plantInFront.state === 'DISEASED' || plantInFront.state === 'WARNING') {
+          carbonCalculator.recordAffectedPlant(plantInFront.id);
           this.addLog(
             'DETECTION',
             `Foliage acquired: ${plantInFront.id} [${plantInFront.state}]. Disease: ${plantInFront.disease?.name || 'Unknown'}`
@@ -557,16 +571,19 @@ export class SimulatorManager {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Environmental Impact Query
+  // Environmental Impact & Carbon Intelligence
   // ───────────────────────────────────────────────────────────────────────────
-  public getEnvironmentalImpact() {
-    const totalPlants = this.scene.getAllPlants().length;
-    return carbonCalculator.calculate(
-      this.totalTreatedPlantsCount,
-      totalPlants,
-      this.totalChemicalUsedMl,
-      this.driveSecondsElapsed
-    );
+  public getEnvironmentalImpact(): CarbonImpactModel {
+    return carbonCalculator.calculate();
+  }
+
+  public getCarbonCalculator(): CarbonImpactCalculator {
+    return carbonCalculator;
+  }
+
+  public loadDeterministicBenchmark() {
+    carbonCalculator.loadDeterministicBenchmark();
+    this.addLog('INFO', 'Loaded deterministic environmental benchmark scenario (100 m² field, 18 m² treated area).');
   }
 
   public addLog(type: SimulatorLogEvent['type'], message: string) {
@@ -592,6 +609,7 @@ export class SimulatorManager {
     this.driveSecondsElapsed = 0;
     this.safetyStopActive = false;
     this.detectedPlant = null;
+    carbonCalculator.reset();
     this.addLog('INFO', 'Field and simulation statistics reset to initial baseline.');
   }
 

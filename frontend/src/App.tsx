@@ -18,6 +18,7 @@ import {
   sendRobotStop,
   sendEmergencyStop
 } from './services/api';
+import { EnvironmentalImpactCard } from './components/EnvironmentalImpactCard';
 
 export const App: React.FC = () => {
   const { telemetry, wsConnected } = useTelemetry();
@@ -115,6 +116,11 @@ export const App: React.FC = () => {
             {/* Dashboard Primary Section: Robot Sensor Status Only */}
             <section style={{ width: '100%' }}>
               <TelemetryCard telemetry={telemetry} />
+            </section>
+
+            {/* Environmental Impact & Carbon Intelligence Module */}
+            <section style={{ width: '100%' }}>
+              <EnvironmentalImpactCard telemetry={telemetry} />
             </section>
           </div>
         )}
