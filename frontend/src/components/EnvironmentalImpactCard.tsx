@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Leaf,
   Zap,
@@ -652,134 +653,452 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
       </div>
 
       {/* ── MODAL 1: VIEW CALCULATION STEP-BY-STEP (Section 22) ─────────────── */}
-      {isCalcModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.80)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 110,
-          padding: '1rem'
-        }}>
-          <div className="glass-panel" style={{
-            width: '740px',
-            maxHeight: '85vh',
-            overflowY: 'auto',
+      {isCalcModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={() => setIsCalcModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 7, 18, 0.82)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
             padding: '1.5rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(56, 189, 248, 0.35)',
-            background: '#0b1320',
-            boxShadow: '0 0 35px rgba(56, 189, 248, 0.25)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                <Calculator size={20} color="var(--sky-400)" />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-                  Carbon Calculation Transparency & Mathematical Derivations
-                </h3>
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '860px',
+              height: 'auto',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '16px',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              background: 'linear-gradient(175deg, #0e192b 0%, #080f1a 100%)',
+              boxShadow: '0 25px 65px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.25)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header (Pinned) */}
+            <div style={{
+              flexShrink: 0,
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(14, 25, 43, 0.98)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  padding: '8px',
+                  borderRadius: '10px',
+                  background: 'rgba(56, 189, 248, 0.15)',
+                  border: '1px solid rgba(56, 189, 248, 0.3)'
+                }}>
+                  <Calculator size={20} color="var(--sky-400)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                    Carbon Calculation Transparency & Mathematical Derivations
+                  </h3>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
+                    Real-time mathematical equations evaluated dynamically from sensor and simulation events.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCalcModalOpen(false)}
                 className="btn btn-outline"
-                style={{ padding: '0.3rem', borderRadius: '8px', color: 'var(--text-muted)' }}
+                style={{
+                  padding: '0.4rem',
+                  borderRadius: '8px',
+                  color: 'var(--text-muted)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)'
+                }}
+                aria-label="Close"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              All equations are evaluated in real time from live simulation inputs. No metrics are fabricated or hardcoded.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {Object.entries(model.breakdown).map(([key, step]) => (
-                <div key={key} style={{
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${step.status === 'VALID' ? 'rgba(255,255,255,0.1)' : 'rgba(245, 158, 11, 0.35)'}`,
-                  borderRadius: '10px',
-                  padding: '0.75rem 0.95rem'
+            {/* Scrollable Content */}
+            <div style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              padding: '1.25rem 1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1.25rem'
+            }}>
+              {/* Category 1: Conventional Baseline */}
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  marginBottom: '0.65rem',
+                  color: 'var(--rose-400)',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#fff' }}>
-                      {step.name}
-                    </span>
-                    <span style={{
-                      fontSize: '0.62rem',
-                      fontWeight: 800,
-                      color: step.status === 'VALID' ? 'var(--emerald-400)' : 'var(--amber-400)',
-                      background: step.status === 'VALID' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
-                      padding: '0.1rem 0.4rem',
-                      borderRadius: '4px'
-                    }}>
-                      {step.status === 'VALID' ? 'EVALUATED' : 'NOT CONFIGURED'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>
-                    Formula: {step.formula}
-                  </div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--sky-400)', fontFamily: 'monospace', marginTop: '2px' }}>
-                    Substitution: {step.substitution}
-                  </div>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff', marginTop: '4px' }}>
-                    Result: <strong style={{ color: step.status === 'VALID' ? 'var(--emerald-400)' : 'var(--amber-400)' }}>{step.result}</strong>
-                  </div>
+                  <span>1. Conventional Full-Area Baseline Accounting</span>
                 </div>
-              ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {[model.breakdown.baselineChemical, model.breakdown.baselineEnergy, model.breakdown.baselineTotal]
+                    .filter(Boolean)
+                    .map((step, idx) => (
+                      <div
+                        key={`base-${idx}`}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: `1px solid ${step.status === 'VALID' ? 'rgba(244, 63, 94, 0.25)' : 'rgba(245, 158, 11, 0.35)'}`,
+                          borderRadius: '12px',
+                          padding: '0.85rem 1.1rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.45rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fff' }}>
+                            {step.name}
+                          </span>
+                          <span style={{
+                            fontSize: '0.60rem',
+                            fontWeight: 800,
+                            color: step.status === 'VALID' ? 'var(--emerald-400)' : 'var(--amber-400)',
+                            background: step.status === 'VALID' ? 'rgba(16,185,129,0.14)' : 'rgba(245,158,11,0.14)',
+                            border: `1px solid ${step.status === 'VALID' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            textTransform: 'uppercase'
+                          }}>
+                            {step.status === 'VALID' ? 'EVALUATED' : 'NOT CONFIGURED'}
+                          </span>
+                        </div>
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.72rem',
+                          color: 'var(--text-dim)',
+                          border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Formula: </span>
+                          {step.formula}
+                        </div>
+                        <div style={{
+                          background: 'rgba(56, 189, 248, 0.06)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.74rem',
+                          color: 'var(--sky-300)',
+                          border: '1px solid rgba(56, 189, 248, 0.15)'
+                        }}>
+                          <span style={{ color: 'var(--sky-400)', fontWeight: 700 }}>Substitution: </span>
+                          {step.substitution}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '2px' }}>
+                          <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>Evaluated Result:</span>
+                          <span style={{
+                            fontSize: '0.88rem',
+                            fontWeight: 800,
+                            color: step.status === 'VALID' ? 'var(--rose-400)' : 'var(--amber-400)'
+                          }}>
+                            {step.result}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Category 2: AgriGuard Precision */}
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  marginBottom: '0.65rem',
+                  color: 'var(--emerald-400)',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em'
+                }}>
+                  <span>2. AgriGuard Targeted Precision Model</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {[model.breakdown.agriguardChemical, model.breakdown.agriguardEnergy, model.breakdown.agriguardTotal]
+                    .filter(Boolean)
+                    .map((step, idx) => (
+                      <div
+                        key={`agri-${idx}`}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: `1px solid ${step.status === 'VALID' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.35)'}`,
+                          borderRadius: '12px',
+                          padding: '0.85rem 1.1rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.45rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fff' }}>
+                            {step.name}
+                          </span>
+                          <span style={{
+                            fontSize: '0.60rem',
+                            fontWeight: 800,
+                            color: step.status === 'VALID' ? 'var(--emerald-400)' : 'var(--amber-400)',
+                            background: step.status === 'VALID' ? 'rgba(16,185,129,0.14)' : 'rgba(245,158,11,0.14)',
+                            border: `1px solid ${step.status === 'VALID' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            textTransform: 'uppercase'
+                          }}>
+                            {step.status === 'VALID' ? 'EVALUATED' : 'NOT CONFIGURED'}
+                          </span>
+                        </div>
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.72rem',
+                          color: 'var(--text-dim)',
+                          border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Formula: </span>
+                          {step.formula}
+                        </div>
+                        <div style={{
+                          background: 'rgba(56, 189, 248, 0.06)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.74rem',
+                          color: 'var(--sky-300)',
+                          border: '1px solid rgba(56, 189, 248, 0.15)'
+                        }}>
+                          <span style={{ color: 'var(--sky-400)', fontWeight: 700 }}>Substitution: </span>
+                          {step.substitution}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '2px' }}>
+                          <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>Evaluated Result:</span>
+                          <span style={{
+                            fontSize: '0.88rem',
+                            fontWeight: 800,
+                            color: step.status === 'VALID' ? 'var(--emerald-400)' : 'var(--amber-400)'
+                          }}>
+                            {step.result}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Category 3: Avoidance & Efficiency */}
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  marginBottom: '0.65rem',
+                  color: 'var(--sky-400)',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em'
+                }}>
+                  <span>3. Net Avoided Impact & Precision Efficiency</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {[model.breakdown.avoidedCO2e, model.breakdown.chemicalReduction, model.breakdown.precisionRate]
+                    .filter(Boolean)
+                    .map((step, idx) => (
+                      <div
+                        key={`avoid-${idx}`}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: `1px solid ${step.status === 'VALID' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(245, 158, 11, 0.35)'}`,
+                          borderRadius: '12px',
+                          padding: '0.85rem 1.1rem',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '0.45rem'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#fff' }}>
+                            {step.name}
+                          </span>
+                          <span style={{
+                            fontSize: '0.60rem',
+                            fontWeight: 800,
+                            color: step.status === 'VALID' ? 'var(--emerald-400)' : 'var(--amber-400)',
+                            background: step.status === 'VALID' ? 'rgba(16,185,129,0.14)' : 'rgba(245,158,11,0.14)',
+                            border: `1px solid ${step.status === 'VALID' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            textTransform: 'uppercase'
+                          }}>
+                            {step.status === 'VALID' ? 'EVALUATED' : 'NOT CONFIGURED'}
+                          </span>
+                        </div>
+                        <div style={{
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.72rem',
+                          color: 'var(--text-dim)',
+                          border: '1px solid rgba(255, 255, 255, 0.05)'
+                        }}>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Formula: </span>
+                          {step.formula}
+                        </div>
+                        <div style={{
+                          background: 'rgba(56, 189, 248, 0.06)',
+                          borderRadius: '8px',
+                          padding: '0.45rem 0.75rem',
+                          fontFamily: 'monospace',
+                          fontSize: '0.74rem',
+                          color: 'var(--sky-300)',
+                          border: '1px solid rgba(56, 189, 248, 0.15)'
+                        }}>
+                          <span style={{ color: 'var(--sky-400)', fontWeight: 700 }}>Substitution: </span>
+                          {step.substitution}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '2px' }}>
+                          <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>Evaluated Result:</span>
+                          <span style={{
+                            fontSize: '0.88rem',
+                            fontWeight: 800,
+                            color: step.status === 'VALID' ? 'var(--emerald-400)' : 'var(--amber-400)'
+                          }}>
+                            {step.result}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
             </div>
 
-            <div style={{ marginTop: '1.25rem', textAlign: 'right' }}>
+            {/* Footer (Pinned) */}
+            <div style={{
+              flexShrink: 0,
+              padding: '1rem 1.5rem',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(14, 25, 43, 0.98)'
+            }}>
+              <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
+                Complies with agricultural GHG lifecycle accounting standards & Section 22 transparency.
+              </span>
               <button
                 type="button"
                 onClick={() => setIsCalcModalOpen(false)}
                 className="btn btn-primary"
-                style={{ padding: '0.45rem 1.25rem', fontSize: '0.78rem', fontWeight: 800, borderRadius: '8px' }}
+                style={{
+                  padding: '0.45rem 1.35rem',
+                  fontSize: '0.80rem',
+                  fontWeight: 800,
+                  borderRadius: '8px'
+                }}
               >
                 Close Derivations
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── MODAL 2: ASSUMPTIONS & CONFIGURATION PANEL (Section 23) ─────────── */}
-      {isConfigModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.80)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 110,
-          padding: '1rem'
-        }}>
-          <div className="glass-panel" style={{
-            width: '640px',
-            maxHeight: '85vh',
-            overflowY: 'auto',
+      {isConfigModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={() => setIsConfigModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 7, 18, 0.82)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
             padding: '1.5rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(245, 158, 11, 0.4)',
-            background: '#0b1320',
-            boxShadow: '0 0 35px rgba(245, 158, 11, 0.2)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                <Sliders size={20} color="var(--amber-400)" />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-                  Environmental Model Assumptions & Emission Factors
-                </h3>
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '680px',
+              height: 'auto',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '16px',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              background: 'linear-gradient(175deg, #111a28 0%, #0a1019 100%)',
+              boxShadow: '0 25px 65px rgba(0, 0, 0, 0.85), 0 0 35px rgba(245, 158, 11, 0.2)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header (Pinned) */}
+            <div style={{
+              flexShrink: 0,
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(17, 26, 40, 0.98)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  padding: '8px',
+                  borderRadius: '10px',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)'
+                }}>
+                  <Sliders size={20} color="var(--amber-400)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                    Environmental Model Assumptions & Emission Factors
+                  </h3>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
+                    Configure baseline intensity, robot electrical power, and LCA carbon factors.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -791,11 +1110,16 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               </button>
             </div>
 
-            <p style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-              Configure baseline application intensity, robot electrical power, and LCA carbon factors. If a value is cleared, it will display as NOT CONFIGURED rather than inventing scientific constants.
-            </p>
-
-            <form onSubmit={handleApplyConfig} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+            <form onSubmit={handleApplyConfig} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <div style={{
+                flex: 1,
+                minHeight: 0,
+                overflowY: 'auto',
+                padding: '1.25rem 1.5rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.9rem'
+              }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                 {/* Field Area */}
                 <div>
@@ -962,14 +1286,24 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.75rem' }}>
+              </div>
+
+              {/* Action Buttons (Pinned Footer) */}
+              <div style={{
+                flexShrink: 0,
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'rgba(17, 26, 40, 0.98)'
+              }}>
                 <button
                   type="button"
                   onClick={handleSetUnconfigured}
                   className="btn btn-outline"
                   style={{
-                    fontSize: '0.72rem',
+                    fontSize: '0.70rem',
                     padding: '0.4rem 0.75rem',
                     borderRadius: '8px',
                     color: 'var(--amber-400)',
@@ -984,14 +1318,14 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                     type="button"
                     onClick={() => setIsConfigModalOpen(false)}
                     className="btn btn-outline"
-                    style={{ fontSize: '0.72rem', padding: '0.4rem 0.85rem', borderRadius: '8px' }}
+                    style={{ fontSize: '0.74rem', padding: '0.45rem 0.95rem', borderRadius: '8px' }}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ fontSize: '0.72rem', padding: '0.4rem 1.15rem', borderRadius: '8px', fontWeight: 800 }}
+                    style={{ fontSize: '0.74rem', padding: '0.45rem 1.25rem', borderRadius: '8px', fontWeight: 800 }}
                   >
                     Save & Recalculate
                   </button>
@@ -999,56 +1333,102 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── MODAL 3: STRUCTURED EVENT LOG VIEWER (Section 19) ───────────────── */}
-      {isLogModalOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.80)',
-          backdropFilter: 'blur(10px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 110,
-          padding: '1rem'
-        }}>
-          <div className="glass-panel" style={{
-            width: '680px',
-            maxHeight: '80vh',
+      {isLogModalOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          onClick={() => setIsLogModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(3, 7, 18, 0.82)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             display: 'flex',
-            flexDirection: 'column',
-            padding: '1.25rem',
-            borderRadius: '16px',
-            border: '1px solid rgba(16, 185, 129, 0.4)',
-            background: '#0b1320',
-            boxShadow: '0 0 35px rgba(16, 185, 129, 0.2)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                <FileText size={18} color="var(--emerald-400)" />
-                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', margin: 0 }}>
-                  Chronological Environmental Event Audit Trail
-                </h3>
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '1.5rem',
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '740px',
+              height: 'auto',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '16px',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              background: 'linear-gradient(175deg, #0d1e20 0%, #081214 100%)',
+              boxShadow: '0 25px 65px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.2)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header (Pinned) */}
+            <div style={{
+              flexShrink: 0,
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'rgba(13, 30, 32, 0.98)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <div style={{
+                  padding: '8px',
+                  borderRadius: '10px',
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                }}>
+                  <FileText size={20} color="var(--emerald-400)" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                    Chronological Environmental Event Audit Trail
+                  </h3>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
+                    Structured real-time event log for treatment actuation, runtime, and footprint accounting.
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsLogModalOpen(false)}
                 className="btn btn-outline"
-                style={{ padding: '0.3rem', borderRadius: '8px', color: 'var(--text-muted)' }}
+                style={{
+                  padding: '0.4rem',
+                  borderRadius: '8px',
+                  color: 'var(--text-muted)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)'
+                }}
+                aria-label="Close"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.45rem', paddingRight: '0.25rem' }}>
+            {/* Scrollable Log Body */}
+            <div style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              padding: '1.25rem 1.5rem',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem'
+            }}>
               {carbonCalculator.getEventLogs().length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
                   No environmental events recorded yet. Drive or spray targets to generate audit entries.
                 </div>
               ) : (
@@ -1057,26 +1437,26 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                     background: 'rgba(255,255,255,0.03)',
                     border: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: '8px',
-                    padding: '0.5rem 0.75rem',
+                    padding: '0.6rem 0.85rem',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    fontSize: '0.70rem'
+                    fontSize: '0.72rem'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
                       <span style={{
                         fontSize: '0.60rem',
                         fontWeight: 800,
                         color: log.type === 'SPRAY' ? 'var(--emerald-400)' : log.type === 'AREA' ? 'var(--sky-400)' : 'var(--amber-400)',
-                        background: log.type === 'SPRAY' ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.08)',
-                        padding: '0.1rem 0.35rem',
+                        background: log.type === 'SPRAY' ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.08)',
+                        padding: '2px 6px',
                         borderRadius: '4px'
                       }}>
                         {log.type}
                       </span>
                       <span style={{ color: '#fff' }}>{log.message}</span>
                     </div>
-                    <span style={{ color: 'var(--text-dim)', fontSize: '0.64rem', fontFamily: 'monospace' }}>
+                    <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem', fontFamily: 'monospace' }}>
                       {log.timestamp}
                     </span>
                   </div>
@@ -1084,18 +1464,28 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               )}
             </div>
 
-            <div style={{ marginTop: '0.85rem', display: 'flex', justifyContent: 'flex-end' }}>
+            {/* Pinned Log Footer */}
+            <div style={{
+              flexShrink: 0,
+              padding: '1rem 1.5rem',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              background: 'rgba(13, 30, 32, 0.98)'
+            }}>
               <button
                 type="button"
                 onClick={() => setIsLogModalOpen(false)}
                 className="btn btn-outline"
-                style={{ fontSize: '0.72rem', padding: '0.35rem 0.85rem', borderRadius: '8px' }}
+                style={{ fontSize: '0.76rem', padding: '0.45rem 1.15rem', borderRadius: '8px' }}
               >
-                Close Log
+                Close Audit Log
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
