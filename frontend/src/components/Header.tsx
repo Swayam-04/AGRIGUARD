@@ -9,15 +9,16 @@ import {
   LayoutDashboard,
   Gamepad2,
   Stethoscope,
-  Boxes
+  Boxes,
+  Leaf
 } from 'lucide-react';
 import { TelemetryData } from '../types';
 
 interface HeaderProps {
   telemetry: TelemetryData | null;
   wsConnected: boolean;
-  activeTab: 'dashboard' | 'remote' | 'simulation' | 'diagnostics';
-  setActiveTab: (tab: 'dashboard' | 'remote' | 'simulation' | 'diagnostics') => void;
+  activeTab: 'dashboard' | 'remote' | 'simulation' | 'diagnostics' | 'environmental';
+  setActiveTab: (tab: 'dashboard' | 'remote' | 'simulation' | 'diagnostics' | 'environmental') => void;
   onEmergencyStop: () => void;
 }
 
@@ -40,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'remote' as const, label: 'Field Remote', icon: Gamepad2 },
     { id: 'simulation' as const, label: 'Simulated View', icon: Boxes },
+    { id: 'environmental' as const, label: 'Environmental Impact', icon: Leaf },
     { id: 'diagnostics' as const, label: 'Hardware Diagnostics', icon: Stethoscope }
   ];
 

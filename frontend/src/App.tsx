@@ -22,7 +22,7 @@ import { EnvironmentalImpactCard } from './components/EnvironmentalImpactCard';
 
 export const App: React.FC = () => {
   const { telemetry, wsConnected } = useTelemetry();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'remote' | 'simulation' | 'diagnostics'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'remote' | 'simulation' | 'diagnostics' | 'environmental'>('dashboard');
   const [activeZoneId, setActiveZoneId] = useState<string>('ZONE-R1C1');
 
   const [lastDetection, setLastDetection] = useState<AIDetection | null>(null);
@@ -117,11 +117,6 @@ export const App: React.FC = () => {
             <section style={{ width: '100%' }}>
               <TelemetryCard telemetry={telemetry} />
             </section>
-
-            {/* Environmental Impact & Carbon Intelligence Module */}
-            <section style={{ width: '100%' }}>
-              <EnvironmentalImpactCard telemetry={telemetry} />
-            </section>
           </div>
         )}
 
@@ -157,6 +152,12 @@ export const App: React.FC = () => {
 
         {activeTab === 'simulation' && (
           <SimulatedViewPage />
+        )}
+
+        {activeTab === 'environmental' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
+            <EnvironmentalImpactCard telemetry={telemetry} />
+          </div>
         )}
 
         {activeTab === 'diagnostics' && (
