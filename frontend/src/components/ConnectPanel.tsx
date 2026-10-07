@@ -140,11 +140,11 @@ export const ConnectPanel: React.FC<ConnectPanelProps> = ({ telemetry, onConnect
     }
 
     setIsActionPending(true);
-    setStatusMessage('Opening Bluetooth pairing window… select "AgriGuard-Robot"');
+    setStatusMessage('Opening Bluetooth device chooser… scanning all nearby devices');
     try {
       const ok = await connectionManager.connect('bluetooth');
       if (ok) {
-        setStatusMessage('Connected to AgriGuard ESP32 via Web Bluetooth! Real hardware telemetry live.');
+        setStatusMessage('Connected to Bluetooth device! Hardware connection active.');
       }
       onConnectionChange?.();
     } catch (err: any) {
@@ -624,7 +624,7 @@ export const ConnectPanel: React.FC<ConnectPanelProps> = ({ telemetry, onConnect
             )}
 
             <p style={{ fontSize: '0.74rem', color: 'var(--text-muted)', margin: 0 }}>
-              Connect directly via GATT service <code style={{ color: 'var(--emerald-400)', fontSize: '0.7rem' }}>{HARDWARE_CONFIG.BLE.SERVICE_UUID.slice(0, 18)}…</code>. User permission dialog will open upon clicking below.
+              Scans and discovers all available Bluetooth devices in your area (AgriGuard ESP32, BLE modules, and nearby peripherals). Select any device to connect.
             </p>
 
             {/* Explicit User Button */}

@@ -414,7 +414,7 @@ export class BLETransport implements IRobotTransport {
       state: this._state,
       transport: 'Bluetooth',
       mode: 'REAL_HARDWARE',
-      deviceName: this._device?.name || HARDWARE_CONFIG.BLE.DEVICE_NAME_PREFIX,
+      deviceName: this._device?.name || 'Bluetooth Device',
       message: this._message
     };
   }
@@ -431,74 +431,162 @@ export class BLETransport implements IRobotTransport {
       return false;
     }
 
-    this._updateState('CONNECTING', 'Opening Bluetooth device chooser… Select "AgriGuard-Robot"');
+    this._updateState('CONNECTING', 'Scanning for all available Bluetooth devices nearby…');
 
     try {
       const nav: any = navigator;
+      // Show ALL nearby Bluetooth devices in the user's area without filtering out by prefix
       const device = await nav.bluetooth.requestDevice({
-        filters: [
-          { namePrefix: HARDWARE_CONFIG.BLE.DEVICE_NAME_PREFIX }
-        ],
-        optionalServices: [HARDWARE_CONFIG.BLE.SERVICE_UUID]
+        acceptAllDevices: true,
+        optionalServices: [
+          HARDWARE_CONFIG.BLE.SERVICE_UUID,
+          '6e400001-b5a3-f393-e0a9-e50e24dcca9e', // Nordic UART Service (NUS)
+          '0000ffe0-0000-1000-8000-00805f9b34fb', // HM-10 / CC2541 Serial
+          '00001800-0000-1000-8000-00805f9b34fb', // Generic Access
+          '00001801-0000-1000-8000-00805f9b34fb', // Generic Attribute
+          '0000180a-0000-1000-8000-00805f9b34fb', // Device Information
+          '0000180f-0000-1000-8000-00805f9b34fb', // Battery Service
+          '0000181a-0000-1000-8000-00805f9b34fb', // Environmental Sensing
+          '00001815-0000-1000-8000-00805f9b34fb', // Automation IO
+          '0000fff0-0000-1000-8000-00805f9b34fb'  // Generic ESP32 Custom
+        ]
       });
 
       this._device = device;
-      this._updateState('CONNECTING', `Connecting to GATT server on ${device.name || 'AgriGuard-Robot'}…`);
+      const deviceDisplayName = device.name || 'Bluetooth Device';
+      this._updateState('CONNECTING', `Connecting to GATT server on ${deviceDisplayName}…`);
 
       // GATT Connect
       const server = await device.gatt.connect();
       this._server = server;
 
-      // Primary Service
-      const service = await server.getPrimaryService(HARDWARE_CONFIG.BLE.SERVICE_UUID);
+      let cmdChar: any = null;
+      let telemChar: any = null;
+      let statusChar: any = null;
 
-      // Characteristics
-      this._cmdChar = await service.getCharacteristic(HARDWARE_CONFIG.BLE.COMMAND_CHARACTERISTIC_UUID);
-      this._telemetryChar = await service.getCharacteristic(HARDWARE_CONFIG.BLE.TELEMETRY_CHARACTERISTIC_UUID);
-
+      // 1. Primary Attempt: AgriGuard Custom BLE Service
       try {
-        this._statusChar = await service.getCharacteristic(HARDWARE_CONFIG.BLE.STATUS_CHARACTERISTIC_UUID);
-        await this._statusChar.startNotifications();
-        this._statusChar.addEventListener('characteristicvaluechanged', (e: any) => {
-          try {
-            const raw = new TextDecoder().decode(e.target.value);
-            console.log('[BLE STATUS]', raw);
-          } catch {}
-        });
+        const service = await server.getPrimaryService(HARDWARE_CONFIG.BLE.SERVICE_UUID);
+        try {
+          cmdChar = await service.getCharacteristic(HARDWARE_CONFIG.BLE.COMMAND_CHARACTERISTIC_UUID);
+        } catch {}
+        try {
+          telemChar = await service.getCharacteristic(HARDWARE_CONFIG.BLE.TELEMETRY_CHARACTERISTIC_UUID);
+        } catch {}
+        try {
+          statusChar = await service.getCharacteristic(HARDWARE_CONFIG.BLE.STATUS_CHARACTERISTIC_UUID);
+        } catch {}
       } catch {
-        // Optional status characteristic
+        // Device does not expose AgriGuard custom UUID; try standard UART fallbacks
       }
 
-      // Start Telemetry Notifications
-      await this._telemetryChar.startNotifications();
-      this._telemetryChar.addEventListener('characteristicvaluechanged', (event: any) => {
+      // 2. Secondary Attempt: Nordic Semiconductor UART Service (NUS)
+      if (!cmdChar || !telemChar) {
         try {
-          const raw = new TextDecoder().decode(event.target.value);
-          const telem = JSON.parse(raw);
-          telem.esp32_connected = true;
-          telem.mode = 'REAL_HARDWARE';
-          telem.data_source = 'ESP32_BLE';
+          const nusService = await server.getPrimaryService('6e400001-b5a3-f393-e0a9-e50e24dcca9e');
+          if (!cmdChar) {
+            cmdChar = await nusService.getCharacteristic('6e400002-b5a3-f393-e0a9-e50e24dcca9e'); // RX (write)
+          }
+          if (!telemChar) {
+            telemChar = await nusService.getCharacteristic('6e400003-b5a3-f393-e0a9-e50e24dcca9e'); // TX (notify)
+          }
+        } catch {}
+      }
 
-          // Deliver directly to dashboard
-          this._onTelemetry(telem);
+      // 3. Tertiary Attempt: HM-10 / CC2541 Serial Service
+      if (!cmdChar || !telemChar) {
+        try {
+          const hmService = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+          const char = await hmService.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+          if (!cmdChar) cmdChar = char;
+          if (!telemChar) telemChar = char;
+        } catch {}
+      }
 
-          // Ingest into backend for AI & DB persistence
-          fetch('/api/robot/telemetry_ingest', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: raw
-          }).catch(() => {});
-        } catch (err) {
-          console.warn('[BLE] Telemetry parse error:', err);
+      // 4. Quaternary Attempt: Inspect any available primary services for writable and notifiable characteristics
+      if (!cmdChar || !telemChar) {
+        try {
+          const primaryServices = await server.getPrimaryServices();
+          for (const s of primaryServices) {
+            try {
+              const characteristics = await s.getCharacteristics();
+              for (const c of characteristics) {
+                if (!cmdChar && (c.properties?.write || c.properties?.writeWithoutResponse)) {
+                  cmdChar = c;
+                }
+                if (!telemChar && (c.properties?.notify || c.properties?.indicate)) {
+                  telemChar = c;
+                }
+              }
+            } catch {}
+          }
+        } catch {}
+      }
+
+      this._cmdChar = cmdChar;
+      this._telemetryChar = telemChar;
+      this._statusChar = statusChar;
+
+      // Status notifications if present
+      if (this._statusChar && this._statusChar.properties?.notify) {
+        try {
+          await this._statusChar.startNotifications();
+          this._statusChar.addEventListener('characteristicvaluechanged', (e: any) => {
+            try {
+              const raw = new TextDecoder().decode(e.target.value);
+              console.log('[BLE STATUS]', raw);
+            } catch {}
+          });
+        } catch {}
+      }
+
+      // Start Telemetry Notifications if characteristic supports notify or indicate
+      if (this._telemetryChar && (this._telemetryChar.properties?.notify || this._telemetryChar.properties?.indicate)) {
+        try {
+          await this._telemetryChar.startNotifications();
+          this._telemetryChar.addEventListener('characteristicvaluechanged', (event: any) => {
+            try {
+              const raw = new TextDecoder().decode(event.target.value);
+              const telem = JSON.parse(raw);
+              telem.esp32_connected = true;
+              telem.mode = 'REAL_HARDWARE';
+              telem.data_source = 'ESP32_BLE';
+
+              // Deliver directly to dashboard
+              this._onTelemetry(telem);
+
+              // Ingest into backend for AI & DB persistence
+              fetch('/api/robot/telemetry_ingest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: raw
+              }).catch(() => {});
+            } catch (err) {
+              console.warn('[BLE] Telemetry stream parse warning:', err);
+            }
+          });
+        } catch (subErr) {
+          console.warn('[BLE] Telemetry notification registration skipped:', subErr);
         }
-      });
+      }
 
       // Disconnect Listener
       device.addEventListener('gattserverdisconnected', () => {
         this._handleGattDisconnected();
       });
 
-      this._updateState('CONNECTED', `Connected to ${device.name || 'AgriGuard-Robot'} via Web Bluetooth! Real hardware live.`);
+      const hasControls = Boolean(this._cmdChar);
+      const hasTelem = Boolean(this._telemetryChar);
+      let statusMsg = `Connected to ${deviceDisplayName} via Web Bluetooth!`;
+      if (hasControls && hasTelem) {
+        statusMsg += ' Real hardware telemetry & controls live.';
+      } else if (hasControls) {
+        statusMsg += ' Hardware control channel live.';
+      } else {
+        statusMsg += ' GATT link established.';
+      }
+
+      this._updateState('CONNECTED', statusMsg);
       return true;
     } catch (e: any) {
       if (e.name === 'NotFoundError') {
@@ -524,8 +612,10 @@ export class BLETransport implements IRobotTransport {
   async disconnect(): Promise<void> {
     if (this._device?.gatt?.connected) {
       try {
-        // Safe stop command before disconnecting
-        await this.sendCommand({ type: 'robot_command', command: 'STOP' });
+        // Safe stop command before disconnecting if writable
+        if (this._cmdChar) {
+          await this.sendCommand({ type: 'robot_command', command: 'STOP' });
+        }
         this._device.gatt.disconnect();
       } catch {}
     }
@@ -535,10 +625,10 @@ export class BLETransport implements IRobotTransport {
   async reconnect(): Promise<boolean> {
     if (this._device) {
       try {
-        this._updateState('RECONNECTING', `Reconnecting to ${this._device.name}…`);
+        this._updateState('RECONNECTING', `Reconnecting to ${this._device.name || 'Bluetooth Device'}…`);
         const server = await this._device.gatt.connect();
         this._server = server;
-        this._updateState('CONNECTED', `Reconnected to ${this._device.name} via Bluetooth.`);
+        this._updateState('CONNECTED', `Reconnected to ${this._device.name || 'Bluetooth Device'} via Bluetooth.`);
         return true;
       } catch {
         return await this.connect();
@@ -548,13 +638,20 @@ export class BLETransport implements IRobotTransport {
   }
 
   async sendCommand(payload: RobotCommandPayload): Promise<any> {
-    if (!this.isConnected() || !this._cmdChar) {
+    if (!this.isConnected()) {
       throw new Error('Bluetooth is not connected. Command rejected.');
+    }
+    if (!this._cmdChar) {
+      throw new Error(`Device "${this._device?.name || 'Selected Device'}" has no writable command characteristic. Please pair with an AgriGuard robot.`);
     }
 
     const json = JSON.stringify(payload);
     const data = new TextEncoder().encode(json);
-    await this._cmdChar.writeValue(data);
+    if (this._cmdChar.properties?.writeWithoutResponse && !this._cmdChar.properties?.write) {
+      await this._cmdChar.writeValueWithoutResponse(data);
+    } else {
+      await this._cmdChar.writeValue(data);
+    }
     return { ok: true, accepted: true, executed: true, source: 'bluetooth_gatt' };
   }
 }
