@@ -9,21 +9,23 @@ import {
   Cpu,
   ScrollText,
   MonitorPlay,
-  Crosshair
+  Crosshair,
+  Microscope
 } from 'lucide-react';
 import { TelemetryData } from '../types';
 
 export type TabId =
   | 'dashboard'
   | 'remote'
-  | 'simulation'
-  | 'diagnostics'
+  | 'disease'
   | 'heatmap'
+  | 'simulation'
+  | 'weeds'
+  | 'environmental'
   | 'sensors'
   | 'devices'
-  | 'logs'
-  | 'weeds'
-  | 'environmental';
+  | 'diagnostics'
+  | 'logs';
 
 interface SidebarNavProps {
   activeTab: TabId;
@@ -33,15 +35,16 @@ interface SidebarNavProps {
 }
 
 const navItems: { id: TabId; label: string; icon: React.ElementType; section?: string }[] = [
-  { id: 'dashboard',     label: 'Dashboard',             icon: LayoutDashboard, section: 'MAIN' },
-  { id: 'heatmap',       label: 'Field Monitor',          icon: Map },
-  { id: 'remote',        label: 'Robot Control & Crop AI', icon: Gamepad2 },
-  { id: 'simulation',    label: '3D Simulation',          icon: MonitorPlay },
+  { id: 'dashboard',     label: 'Dashboard',             icon: LayoutDashboard, section: 'OPERATIONS' },
+  { id: 'remote',        label: 'Field Remote Cockpit',   icon: Gamepad2 },
+  { id: 'disease',       label: 'Crop Disease AI & Lab',  icon: Microscope },
+  { id: 'heatmap',       label: 'Field Monitor Camera',   icon: Map },
   { id: 'weeds',         label: 'Weed Management',        icon: Crosshair },
+  { id: 'simulation',    label: '3D Simulation',          icon: MonitorPlay, section: 'SIMULATION & ECO' },
   { id: 'environmental', label: 'Environmental Impact',   icon: Leaf },
-  { id: 'sensors',       label: 'Sensors',                icon: Activity, section: 'HARDWARE' },
+  { id: 'sensors',       label: 'Sensors',                icon: Activity, section: 'HARDWARE & SYSTEM' },
   { id: 'devices',       label: 'Device Health',          icon: Cpu },
-  { id: 'diagnostics',   label: 'Hardware Diagnostics',   icon: Stethoscope, section: 'SYSTEM' },
+  { id: 'diagnostics',   label: 'Hardware Diagnostics',   icon: Stethoscope },
   { id: 'logs',          label: 'System Logs',            icon: ScrollText },
 ];
 

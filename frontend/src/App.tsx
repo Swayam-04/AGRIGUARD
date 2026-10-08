@@ -14,6 +14,7 @@ import { SimulatedViewPage } from './simulator/SimulatedViewPage';
 import { WeedManagementPage } from './pages/WeedManagementPage';
 import { EnvironmentalImpactCard } from './components/EnvironmentalImpactCard';
 import { FieldRemotePage } from './pages/FieldRemotePage';
+import { DiseaseDetectPage } from './pages/DiseaseDetectPage';
 import { AIDetection, TreatmentDecision } from './types';
 import {
   runCropScan,
@@ -34,17 +35,19 @@ import {
   Zap,
   AlertTriangle,
   ShieldAlert,
-  Droplets
+  Droplets,
+  Microscope
 } from 'lucide-react';
 
 // ─── Page meta ─────────────────────────────────────────────────────────────
 const PAGE_META: Record<TabId, { title: string; section: string }> = {
-  dashboard:     { title: 'Dashboard',             section: 'Overview' },
-  heatmap:       { title: 'Field Monitor',          section: 'Field Operations' },
-  remote:        { title: 'Robot Control & Crop AI', section: 'Field Operations' },
-  simulation:    { title: '3D Simulation',          section: 'Simulation' },
+  dashboard:     { title: 'Dashboard',             section: 'Operations' },
+  remote:        { title: 'Field Remote Cockpit',   section: 'Operations' },
+  disease:       { title: 'Crop Disease AI & Lab',  section: 'AI & Vision' },
+  heatmap:       { title: 'Field Monitor Camera',   section: 'Operations' },
   weeds:         { title: 'Weed Management',        section: 'Field Operations' },
-  environmental: { title: 'Environmental Impact',   section: 'Field Operations' },
+  simulation:    { title: '3D Simulation',          section: 'Simulation & Eco' },
+  environmental: { title: 'Environmental Impact',   section: 'Simulation & Eco' },
   sensors:       { title: 'Sensors',                section: 'Hardware' },
   devices:       { title: 'Device Health',          section: 'Hardware' },
   diagnostics:   { title: 'Hardware Diagnostics',   section: 'System' },
@@ -251,10 +254,10 @@ export const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Hardware Connection Panel */}
+              {/* Hardware Connection Panel (Web Bluetooth & Wi-Fi) */}
               <ConnectPanel telemetry={telemetry} />
 
-              {/* Live Digital Twin */}
+              {/* Live Digital Twin 3D Rover */}
               <AgriGuardTwin telemetry={telemetry} />
 
               {/* Sensor Telemetry */}
@@ -262,7 +265,7 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* ━━━ ROBOT CONTROL & CROP AI (Remote) ━━━ */}
+          {/* ━━━ ROBOT CONTROL (Cockpit) ━━━ */}
           {activeTab === 'remote' && (
             <FieldRemotePage
               telemetry={telemetry}
@@ -278,24 +281,11 @@ export const App: React.FC = () => {
             />
           )}
 
-          {/* ━━━ HARDWARE DIAGNOSTICS ━━━ */}
-          {activeTab === 'diagnostics' && (
-            <DiagnosticsPage />
-          )}
-
-          {/* ━━━ SENSORS ━━━ */}
-          {activeTab === 'sensors' && (
-            <SensorsPage telemetry={telemetry} />
-          )}
-
-          {/* ━━━ DEVICES ━━━ */}
-          {activeTab === 'devices' && (
-            <DeviceHealthPage />
-          )}
-
-          {/* ━━━ LOGS ━━━ */}
-          {activeTab === 'logs' && (
-            <SystemLogsPage />
+          {/* ━━━ CROP DISEASE AI & UPLOAD LAB ━━━ */}
+          {activeTab === 'disease' && (
+            <div style={{ width: '100%' }}>
+              <DiseaseDetectPage />
+            </div>
           )}
 
           {/* ━━━ FIELD MONITOR (Camera) ━━━ */}
@@ -314,14 +304,14 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* ━━━ SIMULATION ━━━ */}
-          {activeTab === 'simulation' && (
-            <SimulatedViewPage />
-          )}
-
           {/* ━━━ WEED MANAGEMENT ━━━ */}
           {activeTab === 'weeds' && (
             <WeedManagementPage />
+          )}
+
+          {/* ━━━ SIMULATION (3D Multi-Tank Farm) ━━━ */}
+          {activeTab === 'simulation' && (
+            <SimulatedViewPage />
           )}
 
           {/* ━━━ ENVIRONMENTAL IMPACT & CARBON INTELLIGENCE ━━━ */}
@@ -329,6 +319,26 @@ export const App: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%' }}>
               <EnvironmentalImpactCard telemetry={telemetry} />
             </div>
+          )}
+
+          {/* ━━━ SENSORS ━━━ */}
+          {activeTab === 'sensors' && (
+            <SensorsPage telemetry={telemetry} />
+          )}
+
+          {/* ━━━ DEVICES ━━━ */}
+          {activeTab === 'devices' && (
+            <DeviceHealthPage />
+          )}
+
+          {/* ━━━ HARDWARE DIAGNOSTICS ━━━ */}
+          {activeTab === 'diagnostics' && (
+            <DiagnosticsPage />
+          )}
+
+          {/* ━━━ SYSTEM LOGS ━━━ */}
+          {activeTab === 'logs' && (
+            <SystemLogsPage />
           )}
 
         </div>
