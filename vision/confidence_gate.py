@@ -73,7 +73,10 @@ class ConfidenceGate:
         crop_conf = crop_result.confidence
         disease_conf = disease_result.get("confidence", 0.0)
         is_healthy = disease_result.get("is_healthy", False)
-        crop_name = crop_result.crop_name
+        
+        # Prefer the crop name from the disease result if it was explicitly modified (e.g. Weed override)
+        crop_name = disease_result.get("crop", crop_result.crop_name)
+        
         disease_name = disease_result.get("disease", "Unknown")
 
         # 1. Leaf Detection Confidence Gate

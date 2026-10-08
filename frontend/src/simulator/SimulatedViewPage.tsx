@@ -49,6 +49,8 @@ import {
   Check,
   Play,
   RefreshCw,
+  Stethoscope,
+  ShieldCheck,
 } from 'lucide-react';
 import { FarmScene, SimCameraMode } from './FarmScene';
 import { SimulatorManager, SIMULATOR_ZONES } from './SimulatorManager';
@@ -87,6 +89,7 @@ export const SimulatedViewPage: React.FC = () => {
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState<boolean>(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState<boolean>(false);
   const [selectedPlant, setSelectedPlant] = useState<FarmPlant | null>(null);
+  const [nearbyInfectedPlant, setNearbyInfectedPlant] = useState<FarmPlant | null>(null);
 
   // Carbon Intelligence State
   const [carbonImpact, setCarbonImpact] = useState<CarbonImpactModel>(() => carbonCalculator.calculate());
@@ -312,6 +315,34 @@ export const SimulatedViewPage: React.FC = () => {
     }
   }, [telemetry]);
 
+  // ── Auto-Detect Nearby Infected Plants ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!sceneRef.current) return;
+      const rx = sceneRef.current.robotX;
+      const rz = sceneRef.current.robotZ;
+      const plants = sceneRef.current.plants;
+      
+      let nearestUnhealthy: FarmPlant | null = null;
+      let minDistance = 3.5; // Detection radius in meters
+
+      for (const plant of plants) {
+        if (plant.state === 'DISEASED' || plant.state === 'WARNING') {
+          const dx = plant.position.x - rx;
+          const dz = plant.position.z - rz;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist < minDistance) {
+            minDistance = dist;
+            nearestUnhealthy = plant;
+          }
+        }
+      }
+      setNearbyInfectedPlant(nearestUnhealthy);
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Audio Toggle
   const handleToggleMute = () => {
     buzzerAudio.unlockAudio();
@@ -393,7 +424,7 @@ export const SimulatedViewPage: React.FC = () => {
   // Farmer Approval Spray Execution
   const handleApproveSpray = () => {
     if (!managerRef.current) return;
-    const success = managerRef.current.approveAndSpray(operatorName);
+    const success = managerRef.current.approveAndSpray(operatorName, selectedPlant || undefined);
     if (success) {
       setIsApprovalModalOpen(false);
     }
@@ -543,7 +574,7 @@ export const SimulatedViewPage: React.FC = () => {
       flexDirection: 'column',
       gap: '0.85rem',
       width: '100%',
-      color: '#fff',
+      color: '#ffffff',
       fontFamily: 'Inter, system-ui, sans-serif',
       position: 'relative'
     }}>
@@ -556,10 +587,9 @@ export const SimulatedViewPage: React.FC = () => {
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '1rem',
-        border: '1px solid var(--border-subtle)',
+        border: '1px solid rgba(255,255,255,0.1)',
         background: 'rgba(11, 19, 32, 0.85)',
-        backdropFilter: 'blur(12px)'
-      }}>
+        }}>
         {/* Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{
@@ -605,16 +635,16 @@ export const SimulatedViewPage: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
           {/* Scenario Selector Dropdown */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 600 }}>Scenario:</span>
+            <span style={{ fontSize: '0.74rem', color: '#aaaaaa', fontWeight: 600 }}>Scenario:</span>
             <select
               value={activePreset}
               onChange={(e) => handleSelectPreset(e.target.value as ScenarioPresetId)}
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.14)',
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '8px',
                 padding: '0.35rem 0.75rem',
-                color: '#fff',
+                color: '#ffffff',
                 fontSize: '0.78rem',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -632,8 +662,8 @@ export const SimulatedViewPage: React.FC = () => {
 
           {/* Simulation Speed Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 600 }}>Simulation Speed:</span>
-            <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '2px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <span style={{ fontSize: '0.74rem', color: '#aaaaaa', fontWeight: 600 }}>Simulation Speed:</span>
+            <div style={{ display: 'flex', background: 'rgba(11, 19, 32, 0.95)', padding: '2px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
               {[0.5, 1.0, 2.0].map((spd) => (
                 <button
                   key={spd}
@@ -658,14 +688,15 @@ export const SimulatedViewPage: React.FC = () => {
 
           {/* Camera Perspective Mode Pills */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            <span style={{ fontSize: '0.74rem', color: 'var(--text-dim)', fontWeight: 600 }}>Camera:</span>
-            <div style={{ display: 'flex', background: 'rgba(0,0,0,0.4)', padding: '2px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <span style={{ fontSize: '0.74rem', color: '#aaaaaa', fontWeight: 600 }}>Camera:</span>
+            <div style={{ display: 'flex', background: 'rgba(11, 19, 32, 0.95)', padding: '2px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
               {[
                 { id: 'FOLLOW', label: 'Follow' },
                 { id: 'FREE', label: 'Free' },
                 { id: 'CHASE', label: 'Chase' },
                 { id: 'OVERHEAD', label: 'Top-Down' },
                 { id: 'ISOMETRIC', label: 'Iso' },
+                { id: 'BUMPER', label: 'Front Cam' }
               ].map((cam) => (
                 <button
                   key={cam.id}
@@ -701,8 +732,8 @@ export const SimulatedViewPage: React.FC = () => {
               alignItems: 'center',
               gap: '0.35rem',
               borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#ffffff',
               fontWeight: 600
             }}
             title="Reset 3D camera to elevated crop row perspective"
@@ -770,8 +801,8 @@ export const SimulatedViewPage: React.FC = () => {
               alignItems: 'center',
               gap: '0.4rem',
               borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#fff',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#ffffff',
               fontWeight: 600
             }}
           >
@@ -788,7 +819,7 @@ export const SimulatedViewPage: React.FC = () => {
               padding: '0.4rem',
               borderRadius: '8px',
               color: isAudioMuted ? 'var(--rose-400)' : 'var(--emerald-400)',
-              border: '1px solid rgba(255, 255, 255, 0.15)'
+              border: '1px solid rgba(255,255,255,0.1)'
             }}
             title={isAudioMuted ? 'Unmute Audio Buzzer' : 'Mute Audio Buzzer'}
           >
@@ -804,7 +835,7 @@ export const SimulatedViewPage: React.FC = () => {
         height: '780px',
         borderRadius: '16px',
         overflow: 'hidden',
-        border: '1px solid var(--border-subtle)',
+        border: '1px solid rgba(255,255,255,0.1)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)'
       }}>
         {/* Full-Canvas Three.js Mount */}
@@ -819,29 +850,28 @@ export const SimulatedViewPage: React.FC = () => {
           left: '16px',
           width: '275px',
           background: 'rgba(11, 19, 32, 0.88)',
-          backdropFilter: 'blur(14px)',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid rgba(255,255,255,0.1)',
           padding: '0.85rem',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           zIndex: 10
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.65rem' }}>
             <Radio size={15} color="var(--emerald-400)" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Ultrasonic Proximity</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>Ultrasonic Proximity</span>
           </div>
 
           {/* 3 Metric Value Boxes */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem', marginBottom: '0.6rem' }}>
             {/* Left */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.04)',
+              background: 'rgba(255,255,255,0.06)',
               border: `1px solid ${usLeft < SAFETY_THRESHOLDS.OBSTACLE_CM ? 'var(--rose-500)' : usLeft <= SAFETY_THRESHOLDS.WARNING_CM ? 'var(--amber-500)' : 'rgba(255,255,255,0.08)'}`,
               borderRadius: '8px',
               padding: '0.45rem 0.3rem',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>Left</div>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>Left</div>
               <div style={{ fontSize: '1.05rem', fontWeight: 900, color: usLeft < SAFETY_THRESHOLDS.OBSTACLE_CM ? 'var(--rose-400)' : usLeft <= SAFETY_THRESHOLDS.WARNING_CM ? 'var(--amber-400)' : 'var(--emerald-400)' }}>
                 {usLeft}<span style={{ fontSize: '0.65rem', fontWeight: 600 }}>cm</span>
               </div>
@@ -857,13 +887,13 @@ export const SimulatedViewPage: React.FC = () => {
 
             {/* Center */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.04)',
+              background: 'rgba(255,255,255,0.06)',
               border: `1px solid ${usCenter < SAFETY_THRESHOLDS.OBSTACLE_CM ? 'var(--rose-500)' : usCenter <= SAFETY_THRESHOLDS.WARNING_CM ? 'var(--amber-500)' : 'rgba(255,255,255,0.08)'}`,
               borderRadius: '8px',
               padding: '0.45rem 0.3rem',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>Center</div>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>Center</div>
               <div style={{ fontSize: '1.05rem', fontWeight: 900, color: usCenter < SAFETY_THRESHOLDS.OBSTACLE_CM ? 'var(--rose-400)' : usCenter <= SAFETY_THRESHOLDS.WARNING_CM ? 'var(--amber-400)' : 'var(--emerald-400)' }}>
                 {usCenter}<span style={{ fontSize: '0.65rem', fontWeight: 600 }}>cm</span>
               </div>
@@ -879,13 +909,13 @@ export const SimulatedViewPage: React.FC = () => {
 
             {/* Right */}
             <div style={{
-              background: 'rgba(255, 255, 255, 0.04)',
+              background: 'rgba(255,255,255,0.06)',
               border: `1px solid ${usRight < SAFETY_THRESHOLDS.OBSTACLE_CM ? 'var(--rose-500)' : usRight <= SAFETY_THRESHOLDS.WARNING_CM ? 'var(--amber-500)' : 'rgba(255,255,255,0.08)'}`,
               borderRadius: '8px',
               padding: '0.45rem 0.3rem',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>Right</div>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>Right</div>
               <div style={{ fontSize: '1.05rem', fontWeight: 900, color: usRight < SAFETY_THRESHOLDS.OBSTACLE_CM ? 'var(--rose-400)' : usRight <= SAFETY_THRESHOLDS.WARNING_CM ? 'var(--amber-400)' : 'var(--emerald-400)' }}>
                 {usRight}<span style={{ fontSize: '0.65rem', fontWeight: 600 }}>cm</span>
               </div>
@@ -916,7 +946,7 @@ export const SimulatedViewPage: React.FC = () => {
                 <div style={{ fontSize: '0.72rem', fontWeight: 900, color: 'var(--rose-400)' }}>
                   {isRightObstacle ? 'OBSTACLE RIGHT' : isCenterObstacle ? 'OBSTACLE AHEAD' : 'OBSTACLE LEFT'}
                 </div>
-                <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '0.64rem', color: '#cccccc' }}>
                   Robot will stop if obstacle is closer.
                 </div>
               </div>
@@ -947,16 +977,15 @@ export const SimulatedViewPage: React.FC = () => {
           left: '16px',
           width: '275px',
           background: 'rgba(11, 19, 32, 0.88)',
-          backdropFilter: 'blur(14px)',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid rgba(255,255,255,0.1)',
           padding: '0.85rem',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           zIndex: 10
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
             <Camera size={15} color="var(--emerald-400)" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Robot Camera View</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>Robot Camera View</span>
           </div>
 
           {/* Canvas Rendering FPV Bumper Camera Feed */}
@@ -967,7 +996,7 @@ export const SimulatedViewPage: React.FC = () => {
             overflow: 'hidden',
             background: '#040b14',
             position: 'relative',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            border: '1px solid rgba(255,255,255,0.1)'
           }}>
             <canvas
               ref={bumperCanvasRef}
@@ -988,7 +1017,7 @@ export const SimulatedViewPage: React.FC = () => {
               pointerEvents: 'none'
             }} />
           </div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.35rem', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.65rem', color: '#cccccc', marginTop: '0.35rem', textAlign: 'center' }}>
             Live simulated camera feed
           </div>
         </div>
@@ -1000,16 +1029,15 @@ export const SimulatedViewPage: React.FC = () => {
           left: '16px',
           width: '275px',
           background: 'rgba(11, 19, 32, 0.88)',
-          backdropFilter: 'blur(14px)',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid rgba(255,255,255,0.1)',
           padding: '0.85rem',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           zIndex: 10
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
             <Leaf size={15} color="var(--emerald-400)" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>AI Crop Analysis</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>AI Crop Analysis</span>
           </div>
 
           {targetPlant ? (
@@ -1038,17 +1066,17 @@ export const SimulatedViewPage: React.FC = () => {
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.80rem', fontWeight: 800, color: '#fff' }}>
+                  <div style={{ fontSize: '0.80rem', fontWeight: 800, color: '#ffffff' }}>
                     {targetPlant.id} (Row {targetPlant.row})
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{targetPlant.variety}</div>
+                  <div style={{ fontSize: '0.68rem', color: '#cccccc' }}>{targetPlant.variety}</div>
                   <div style={{ fontSize: '0.70rem', color: targetPlant.state === 'DISEASED' ? 'var(--rose-400)' : targetPlant.state === 'WARNING' ? 'var(--amber-400)' : targetPlant.state === 'TREATED' ? 'var(--purple-400)' : 'var(--emerald-400)', fontWeight: 700 }}>
                     {targetPlant.disease?.name || (targetPlant.state === 'HEALTHY' ? 'Healthy Canopy' : 'Target Acquired')}
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
+                  <div style={{ fontSize: '0.68rem', color: '#aaaaaa' }}>
                     Confidence: {(targetPlant.disease?.confidence ? targetPlant.disease.confidence * 100 : 94.2).toFixed(1)}%
                   </div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
+                  <div style={{ fontSize: '0.68rem', color: '#aaaaaa' }}>
                     Health Score: <strong style={{ color: targetPlant.healthScore > 80 ? 'var(--emerald-400)' : targetPlant.healthScore > 50 ? 'var(--amber-400)' : 'var(--rose-400)' }}>{targetPlant.healthScore}%</strong>
                   </div>
                   {targetTrtInfo && (
@@ -1089,8 +1117,8 @@ export const SimulatedViewPage: React.FC = () => {
                     fontSize: '0.72rem',
                     fontWeight: 700,
                     borderRadius: '6px',
-                    borderColor: 'rgba(255,255,255,0.18)',
-                    color: '#fff'
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    color: '#ffffff'
                   }}
                 >
                   Diagnostics
@@ -1156,7 +1184,7 @@ export const SimulatedViewPage: React.FC = () => {
                 <Scan size={16} />
                 <span>AI Canopy Vision Active</span>
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: '0.75rem', lineHeight: 1.35 }}>
+              <div style={{ fontSize: '0.68rem', color: '#cccccc', marginBottom: '0.75rem', lineHeight: 1.35 }}>
                 Scanning rows. Drive along crop furrows or steer towards canopy to inspect foliage.
               </div>
               <button
@@ -1167,8 +1195,8 @@ export const SimulatedViewPage: React.FC = () => {
                   fontSize: '0.70rem',
                   padding: '0.35rem 0.75rem',
                   borderRadius: '6px',
-                  color: '#fff',
-                  borderColor: 'rgba(255,255,255,0.2)',
+                  color: '#ffffff',
+                  borderColor: 'rgba(255,255,255,0.1)',
                   fontWeight: 600,
                   width: '100%'
                 }}
@@ -1179,30 +1207,65 @@ export const SimulatedViewPage: React.FC = () => {
           )}
         </div>
 
+        {/* 💥 GIANT SPRAYING OVERLAY 💥 */}
+        {telemetry?.sprayActive && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(6, 182, 212, 0.25)',
+            border: '3px solid cyan',
+            boxShadow: '0 0 80px rgba(6, 182, 212, 0.8)',
+            borderRadius: '24px',
+            padding: '2.5rem 5rem',
+            zIndex: 999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '1rem',
+            pointerEvents: 'none',
+            animation: 'spray-pulse 0.4s infinite alternate'
+          }}>
+            <Sparkles size={72} color="cyan" />
+            <h1 style={{ fontSize: '3.5rem', fontWeight: 900, color: 'cyan', textShadow: '0 0 30px cyan', margin: 0, textTransform: 'uppercase', letterSpacing: '4px' }}>
+              Spraying Active
+            </h1>
+            <p style={{ fontSize: '1.4rem', color: '#ffffff', margin: 0, fontWeight: 700 }}>
+              Applying {telemetry.detectedPlant?.disease?.chemicalProduct || 'Treatment'}...
+            </p>
+            <style>{`
+              @keyframes spray-pulse {
+                0% { opacity: 0.85; transform: translate(-50%, -50%) scale(0.98); }
+                100% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+              }
+            `}</style>
+          </div>
+        )}
+
         {/* Subtle Floating Camera Interaction Guide */}
         <div style={{
           position: 'absolute',
           bottom: '16px',
           left: '50%',
           transform: 'translateX(-50%)',
-          background: 'rgba(11, 19, 32, 0.75)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          background: 'rgba(11, 19, 32, 0.98)',
+          border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: '20px',
           padding: '0.3rem 0.85rem',
           fontSize: '0.66rem',
-          color: 'var(--text-muted)',
+          color: '#cccccc',
           display: 'flex',
           alignItems: 'center',
           gap: '0.6rem',
           pointerEvents: 'none',
           zIndex: 9
         }}>
-          <span>🖱️ <strong style={{ color: '#fff' }}>Left-Drag</strong> Orbit</span>
+          <span>🖱️ <strong style={{ color: '#ffffff' }}>Left-Drag</strong> Orbit</span>
           <span>•</span>
-          <span><strong style={{ color: '#fff' }}>Right-Drag</strong> Pan</span>
+          <span><strong style={{ color: '#ffffff' }}>Right-Drag</strong> Pan</span>
           <span>•</span>
-          <span><strong style={{ color: '#fff' }}>Scroll</strong> Zoom</span>
+          <span><strong style={{ color: '#ffffff' }}>Scroll</strong> Zoom</span>
           <span>•</span>
           <span style={{ color: 'var(--emerald-400)' }}>Camera angle stays fixed</span>
         </div>
@@ -1214,16 +1277,15 @@ export const SimulatedViewPage: React.FC = () => {
           right: '16px',
           width: '275px',
           background: 'rgba(11, 19, 32, 0.88)',
-          backdropFilter: 'blur(14px)',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid rgba(255,255,255,0.1)',
           padding: '0.85rem',
           boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
           zIndex: 10
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.55rem' }}>
             <Layers size={15} color="var(--sky-400)" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Field Map</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>Field Map</span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.65rem', alignItems: 'center' }}>
@@ -1233,7 +1295,7 @@ export const SimulatedViewPage: React.FC = () => {
               height: '190px',
               borderRadius: '8px',
               overflow: 'hidden',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              border: '1px solid rgba(255,255,255,0.1)',
               position: 'relative'
             }}>
               <canvas
@@ -1245,10 +1307,10 @@ export const SimulatedViewPage: React.FC = () => {
             </div>
 
             {/* Map Legend */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.68rem', color: '#cccccc' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#0284c7', display: 'inline-block' }} />
-                <span style={{ color: '#fff', fontWeight: 600 }}>Robot</span>
+                <span style={{ color: '#ffffff', fontWeight: 600 }}>Robot</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
@@ -1474,7 +1536,7 @@ export const SimulatedViewPage: React.FC = () => {
         <div className="glass-panel" style={{
           padding: '0.85rem',
           borderRadius: '14px',
-          border: '1px solid var(--border-subtle)',
+          border: '1px solid rgba(255,255,255,0.1)',
           background: 'rgba(11, 19, 32, 0.85)',
           display: 'flex',
           flexDirection: 'column',
@@ -1482,7 +1544,7 @@ export const SimulatedViewPage: React.FC = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.45rem' }}>
             <Compass size={15} color="var(--rose-400)" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Robot Controls</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>Robot Controls</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', gap: '0.75rem' }}>
@@ -1499,7 +1561,7 @@ export const SimulatedViewPage: React.FC = () => {
                   height: '42px',
                   background: telemetry?.movement === 'FORWARD' ? 'var(--emerald-500)' : 'rgba(255,255,255,0.06)',
                   color: telemetry?.movement === 'FORWARD' ? '#05080f' : '#fff',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1524,7 +1586,7 @@ export const SimulatedViewPage: React.FC = () => {
                     height: '42px',
                     background: telemetry?.movement === 'LEFT' ? 'var(--emerald-500)' : 'rgba(255,255,255,0.06)',
                     color: telemetry?.movement === 'LEFT' ? '#05080f' : '#fff',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
@@ -1571,7 +1633,7 @@ export const SimulatedViewPage: React.FC = () => {
                     height: '42px',
                     background: telemetry?.movement === 'RIGHT' ? 'var(--emerald-500)' : 'rgba(255,255,255,0.06)',
                     color: telemetry?.movement === 'RIGHT' ? '#05080f' : '#fff',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
@@ -1596,7 +1658,7 @@ export const SimulatedViewPage: React.FC = () => {
                   height: '42px',
                   background: telemetry?.movement === 'BACKWARD' ? 'var(--emerald-500)' : 'rgba(255,255,255,0.06)',
                   color: telemetry?.movement === 'BACKWARD' ? '#05080f' : '#fff',
-                  border: '1px solid rgba(255,255,255,0.12)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1649,7 +1711,7 @@ export const SimulatedViewPage: React.FC = () => {
         <div className="glass-panel" style={{
           padding: '0.85rem',
           borderRadius: '14px',
-          border: '1px solid var(--border-subtle)',
+          border: '1px solid rgba(255,255,255,0.1)',
           background: 'rgba(11, 19, 32, 0.85)',
           display: 'flex',
           flexDirection: 'column',
@@ -1657,26 +1719,26 @@ export const SimulatedViewPage: React.FC = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.45rem' }}>
             <Activity size={15} color="var(--emerald-400)" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#fff' }}>Robot Telemetry (Live)</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#ffffff' }}>Robot Telemetry (Live)</span>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.45rem', textAlign: 'center' }}>
             {/* Soil Moisture */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>Soil Moisture</div>
+            <div style={{ background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>Soil Moisture</div>
               <div style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--emerald-400)', margin: '2px 0' }}>
                 {(telemetry?.soilMoisturePct || 42.0).toFixed(0)}%
               </div>
-              <div style={{ width: '80%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', margin: '4px auto 2px auto', overflow: 'hidden' }}>
+              <div style={{ width: '80%', height: '4px', background: 'rgba(255,255,255,0.06)', borderRadius: '2px', margin: '4px auto 2px auto', overflow: 'hidden' }}>
                 <div style={{ width: `${telemetry?.soilMoisturePct || 42}%`, height: '100%', background: 'var(--emerald-500)' }} />
               </div>
               <div style={{ fontSize: '0.58rem', color: 'var(--emerald-400)', fontWeight: 700 }}>Normal</div>
             </div>
 
             {/* NPK */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>NPK</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fff', marginTop: '4px', textAlign: 'left', paddingLeft: '6px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>NPK</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#ffffff', marginTop: '4px', textAlign: 'left', paddingLeft: '6px' }}>
                 <div>N: <strong style={{ color: 'var(--emerald-400)' }}>{telemetry?.npk.n || 48}</strong></div>
                 <div>P: <strong style={{ color: 'var(--cyan-400)' }}>{telemetry?.npk.p || 26}</strong></div>
                 <div>K: <strong style={{ color: 'var(--amber-400)' }}>{telemetry?.npk.k || 41}</strong></div>
@@ -1684,31 +1746,31 @@ export const SimulatedViewPage: React.FC = () => {
             </div>
 
             {/* Temperature */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>Temperature</div>
+            <div style={{ background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>Temperature</div>
               <div style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sky-400)', margin: '4px 0' }}>
                 {(telemetry?.dht22.temperature || 29.4).toFixed(1)}°C
               </div>
-              <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>Microclimate</div>
+              <div style={{ fontSize: '0.58rem', color: '#cccccc' }}>Microclimate</div>
             </div>
 
             {/* Humidity */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>Humidity</div>
+            <div style={{ background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>Humidity</div>
               <div style={{ fontSize: '1.05rem', fontWeight: 900, color: 'var(--sky-400)', margin: '4px 0' }}>
                 {(telemetry?.dht22.humidity || 72.8).toFixed(1)}%
               </div>
-              <div style={{ fontSize: '0.58rem', color: 'var(--text-muted)' }}>RH Relative</div>
+              <div style={{ fontSize: '0.58rem', color: '#cccccc' }}>RH Relative</div>
             </div>
 
             {/* IMU (Pitch/Roll) */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontWeight: 700 }}>IMU (Pitch/Roll)</div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fff', marginTop: '6px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.06)', padding: '0.5rem 0.35rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '0.62rem', color: '#aaaaaa', fontWeight: 700 }}>IMU (Pitch/Roll)</div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#ffffff', marginTop: '6px' }}>
                 <div>P: <strong style={{ color: 'var(--amber-400)' }}>{(telemetry?.mpu6050.pitch_deg || 1.2).toFixed(1)}°</strong></div>
                 <div>R: <strong style={{ color: 'var(--amber-400)' }}>{(telemetry?.mpu6050.roll_deg || -0.6).toFixed(1)}°</strong></div>
               </div>
-              <div style={{ fontSize: '0.56rem', color: 'var(--text-muted)', marginTop: '2px' }}>MPU6050 Live</div>
+              <div style={{ fontSize: '0.56rem', color: '#cccccc', marginTop: '2px' }}>MPU6050 Live</div>
             </div>
           </div>
         </div>
@@ -1717,7 +1779,7 @@ export const SimulatedViewPage: React.FC = () => {
         <div className="glass-panel" style={{
           padding: '0.85rem',
           borderRadius: '14px',
-          border: '1px solid var(--border-subtle)',
+          border: '1px solid rgba(255,255,255,0.1)',
           background: 'rgba(11, 19, 32, 0.85)',
           display: 'flex',
           flexDirection: 'column',
@@ -1830,8 +1892,7 @@ export const SimulatedViewPage: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.75)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(11, 19, 32, 0.98)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1985,7 +2046,7 @@ export const SimulatedViewPage: React.FC = () => {
             )}
 
             <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ fontSize: '0.72rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '0.35rem' }}>
+              <label style={{ fontSize: '0.72rem', color: '#aaaaaa', fontWeight: 700, display: 'block', marginBottom: '0.35rem' }}>
                 Authorized Operator Name:
               </label>
               <input
@@ -1996,9 +2057,9 @@ export const SimulatedViewPage: React.FC = () => {
                   width: '100%',
                   padding: '0.55rem 0.75rem',
                   background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.15)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '8px',
-                  color: '#fff',
+                  color: '#ffffff',
                   fontSize: '0.80rem',
                   outline: 'none'
                 }}
@@ -2047,8 +2108,7 @@ export const SimulatedViewPage: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0,0,0,0.75)',
-          backdropFilter: 'blur(8px)',
+          background: 'rgba(11, 19, 32, 0.98)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -2058,13 +2118,13 @@ export const SimulatedViewPage: React.FC = () => {
             width: '480px',
             padding: '1.5rem',
             borderRadius: '16px',
-            border: '1px solid rgba(255,255,255,0.15)',
+            border: '1px solid rgba(255,255,255,0.1)',
             background: '#0b1320'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                 <Leaf size={18} color="var(--emerald-400)" />
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', margin: 0 }}>
                   {selectedPlant.id} Diagnostics
                 </h3>
               </div>
@@ -2073,14 +2133,14 @@ export const SimulatedViewPage: React.FC = () => {
               </span>
             </div>
 
-            <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '1.25rem' }}>
-              <div>Crop Variety: <strong style={{ color: '#fff' }}>{selectedPlant.variety} ({selectedPlant.cropType})</strong></div>
-              <div>Field Coordinate: <strong style={{ color: '#fff' }}>Row {selectedPlant.row}, Stalk {selectedPlant.col} (X: {selectedPlant.position.x}m, Z: {selectedPlant.position.z}m)</strong></div>
+            <div style={{ fontSize: '0.76rem', color: '#dddddd', display: 'flex', flexDirection: 'column', gap: '0.45rem', marginBottom: '1.25rem' }}>
+              <div>Crop Variety: <strong style={{ color: '#ffffff' }}>{selectedPlant.variety} ({selectedPlant.cropType})</strong></div>
+              <div>Field Coordinate: <strong style={{ color: '#ffffff' }}>Row {selectedPlant.row}, Stalk {selectedPlant.col} (X: {selectedPlant.position.x}m, Z: {selectedPlant.position.z}m)</strong></div>
               <div>Foliar Health Score: <strong style={{ color: 'var(--emerald-400)' }}>{selectedPlant.healthScore}%</strong></div>
               {selectedPlant.disease && (
                 <>
                   <div>Pathology: <strong style={{ color: 'var(--amber-400)' }}>{selectedPlant.disease.name}</strong> ({selectedPlant.disease.pathogen})</div>
-                  <div>Symptoms: <span style={{ color: 'var(--text-muted)' }}>{selectedPlant.disease.symptoms}</span></div>
+                  <div>Symptoms: <span style={{ color: '#cccccc' }}>{selectedPlant.disease.symptoms}</span></div>
                   <div>Recommended Dose: <strong style={{ color: 'var(--cyan-400)' }}>{selectedPlant.disease.recommendedDoseMl} mL</strong> of {selectedPlant.disease.chemicalProduct}</div>
                 </>
               )}
@@ -2114,6 +2174,242 @@ export const SimulatedViewPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── 3. Scrollable Page Content: Deep Pathology Analysis ──────────── */}
+      <div style={{
+        marginTop: '24px',
+        padding: '24px',
+        background: 'rgba(11, 19, 32, 0.95)',
+        borderRadius: '16px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
+      }}>
+        <h2 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Stethoscope size={20} color="var(--emerald-500)" />
+          Real-Time Proximity Scanner
+        </h2>
+        
+        {nearbyInfectedPlant ? (
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            background: nearbyInfectedPlant.state === 'DISEASED' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(245, 158, 11, 0.05)',
+            border: `1px solid ${nearbyInfectedPlant.state === 'DISEASED' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
+            borderRadius: '12px',
+            padding: '20px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: nearbyInfectedPlant.state === 'DISEASED' ? 'var(--danger)' : 'var(--warning)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertTriangle size={18} />
+                  Threat Detected: {nearbyInfectedPlant.disease?.name || 'Unknown Stress'}
+                </h3>
+                <p style={{ margin: '4px 0 0 0', color: '#dddddd', fontSize: '0.9rem' }}>
+                  Location: Row {nearbyInfectedPlant.row}, Col {nearbyInfectedPlant.col} (Within 3 meters of Rover)
+                </p>
+              </div>
+              <div style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.06)', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 600, color: '#ffffff' }}>
+                {Math.round((nearbyInfectedPlant.disease?.confidence || 0.8) * 100)}% Confidence
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '8px' }}>
+              <div style={{ background: 'rgba(0,0,0,0.1)', padding: '16px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#cccccc', textTransform: 'uppercase', marginBottom: '8px' }}>Pathogen Details</div>
+                <div style={{ color: '#ffffff', fontSize: '0.95rem' }}>{nearbyInfectedPlant.disease?.pathogen || 'Fungal Infection'}</div>
+                <div style={{ color: '#dddddd', fontSize: '0.85rem', marginTop: '4px' }}>{nearbyInfectedPlant.disease?.symptoms}</div>
+              </div>
+              
+              <div style={{ background: 'rgba(0,0,0,0.1)', padding: '16px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#cccccc', textTransform: 'uppercase', marginBottom: '8px' }}>Prescribed Treatment</div>
+                <div style={{ color: 'var(--cyan-400)', fontSize: '0.95rem', fontWeight: 600 }}>
+                  {nearbyInfectedPlant.disease?.chemicalProduct || 'Standard Fungicide'}
+                </div>
+                <div style={{ color: '#ffffff', fontSize: '0.9rem', marginTop: '4px' }}>
+                  Dose: {nearbyInfectedPlant.disease?.recommendedDoseMl || 25} mL
+                </div>
+                <div style={{ marginTop: '12px' }}>
+                  <button
+                    onClick={() => {
+                      managerRef.current?.approveAndSpray('MANUAL', nearbyInfectedPlant);
+                    }}
+                    className="btn btn-primary"
+                    style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                  >
+                    <Sparkles size={14} /> INSTANT PRECISION SPRAY
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            padding: '40px',
+            textAlign: 'center',
+            background: 'rgba(0,0,0,0.1)',
+            borderRadius: '12px',
+            border: '1px dashed var(--border-subtle)',
+            color: '#cccccc'
+          }}>
+            <ShieldCheck size={32} color="var(--emerald-600)" style={{ margin: '0 auto 12px auto', display: 'block', opacity: 0.5 }} />
+            No threats detected in the immediate vicinity of the rover.
+            <br />
+            <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>Drive the robot near a diseased plant (red/orange) to scan it.</span>
+          </div>
+        )}
+      </div>
+
+      {/* ─────────────────────────────────────────────────────────────────────────── */}
+      {/* 🟤 4. Scrollable Page Content: Deep NPK Soil Quality Analysis 🟤 */}
+      {/* ─────────────────────────────────────────────────────────────────────────── */}
+      <div style={{
+        marginTop: '24px',
+        padding: '24px',
+        background: 'rgba(11, 19, 32, 0.95)',
+        borderRadius: '16px',
+        border: '1px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
+      }}>
+        <h2 style={{ fontSize: '1.25rem', color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Activity size={20} color="var(--amber-500)" />
+          Real-Time Soil NPK & Moisture Sensor
+        </h2>
+        
+        {telemetry?.npk ? (
+          <div style={{
+            display: 'flex',
+            gap: '20px',
+            alignItems: 'stretch'
+          }}>
+            {/* Left: NPK Metrics */}
+            <div style={{
+              flex: 1,
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: '12px',
+              padding: '20px',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#cccccc', marginBottom: '16px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                Macro-Nutrient Spectroscopy
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                <div style={{ flex: 1, background: 'rgba(52, 211, 153, 0.05)', border: '1px solid rgba(52, 211, 153, 0.2)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--emerald-400)' }}>{telemetry.npk.n}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--emerald-500)', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>Nitrogen (N)</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(34, 211, 238, 0.05)', border: '1px solid rgba(34, 211, 238, 0.2)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--cyan-400)' }}>{telemetry.npk.p}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--cyan-500)', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>Phosphorus (P)</div>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(251, 191, 36, 0.05)', border: '1px solid rgba(251, 191, 36, 0.2)', borderRadius: '8px', padding: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--amber-400)' }}>{telemetry.npk.k}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--amber-500)', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px' }}>Potassium (K)</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: AI Analysis */}
+            <div style={{
+              flex: 1,
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: '12px',
+              padding: '20px',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <div style={{ fontSize: '0.75rem', color: '#cccccc', marginBottom: '16px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>
+                AI Zone Analysis
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#aaaaaa' }}>Current Geo-Zone:</span>
+                  <span style={{ fontSize: '0.8rem', color: '#ffffff', fontWeight: 700 }}>{telemetry.currentZone?.name || 'Unknown Zone'}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#aaaaaa' }}>Soil Condition:</span>
+                  <span style={{ fontSize: '0.8rem', color: telemetry.currentZone?.soilCondition === 'OPTIMAL' ? 'var(--emerald-400)' : 'var(--amber-400)', fontWeight: 700 }}>
+                    {telemetry.currentZone?.soilCondition || 'ANALYZING'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px' }}>
+                  <span style={{ fontSize: '0.8rem', color: '#aaaaaa' }}>Moisture Content:</span>
+                  <span style={{ fontSize: '0.8rem', color: '#ffffff', fontWeight: 700 }}>{telemetry.soilMoisturePct}%</span>
+                </div>
+                
+                <div style={{ marginTop: '8px', fontSize: '0.75rem', color: '#cccccc', lineHeight: 1.5, background: 'rgba(255,255,255,0.06)', padding: '12px', borderRadius: '8px', borderLeft: '3px solid var(--amber-500)' }}>
+                  {(() => {
+                    const n = telemetry.npk.n;
+                    const p = telemetry.npk.p;
+                    const k = telemetry.npk.k;
+                    const moist = telemetry.soilMoisturePct;
+                    let issues = [];
+                    let actions = [];
+                    
+                    if (n < 45) {
+                      issues.push("Low Nitrogen (N)");
+                      actions.push("Apply Urea or Ammonium Sulfate top-dressing to boost foliage growth.");
+                    }
+                    if (p < 25) {
+                      issues.push("Low Phosphorus (P)");
+                      actions.push("Apply Superphosphate to encourage deep root development.");
+                    }
+                    if (k < 35) {
+                      issues.push("Low Potassium (K)");
+                      actions.push("Apply Muriate of Potash (MOP) to improve crop disease resistance.");
+                    }
+                    if (moist < 30) {
+                      issues.push("Soil Dryness");
+                      actions.push("Initiate localized drip irrigation to restore field capacity.");
+                    }
+                    if (moist > 75) {
+                      issues.push("Waterlogging");
+                      actions.push("Halt irrigation. Check field drainage to prevent anaerobic root rot.");
+                    }
+
+                    if (issues.length === 0) {
+                      return (
+                        <div style={{ borderLeftColor: 'var(--emerald-500)' }}>
+                          <strong style={{ color: 'var(--emerald-400)' }}>Agronomic Insight:</strong> Soil parameters are optimal for the current crop stage. No immediate macro-nutrient or water intervention required.
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div><strong style={{ color: 'var(--amber-400)' }}>Detected Soil Deficiencies:</strong> <span style={{ color: '#ffffff' }}>{issues.join(' • ')}</span></div>
+                          <div><strong style={{ color: 'var(--cyan-400)' }}>Recommended Healing Action:</strong> <span style={{ color: '#cccccc' }}>{actions.join(' ')}</span></div>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            padding: '40px',
+            textAlign: 'center',
+            background: 'rgba(0,0,0,0.1)',
+            borderRadius: '12px',
+            border: '1px dashed var(--border-subtle)',
+            color: '#cccccc'
+          }}>
+            <Activity size={32} color="var(--amber-600)" style={{ margin: '0 auto 12px auto', display: 'block', opacity: 0.5 }} />
+            NPK Sensor Offline or Initializing...
+            <br />
+            <span style={{ fontSize: '0.85rem', opacity: 0.7 }}>Move the robot to engage soil contact sensors.</span>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 };

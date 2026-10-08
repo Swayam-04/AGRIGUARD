@@ -764,7 +764,7 @@ export const RobotControls: React.FC<RobotControlsProps> = ({
           right: 0,
           bottom: 0,
           background: 'rgba(0,0,0,0.85)',
-          backdropFilter: 'blur(8px)',
+          
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

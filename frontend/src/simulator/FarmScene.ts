@@ -124,10 +124,10 @@ export class FarmScene {
     this.camera.position.set(0, 4.8, 9.5);
 
     // 3. WebGL Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.setPixelRatio(window.devicePixelRatio > 1 ? 0.8 : 1); // Lock to 1x for performance
+    this.renderer.shadowMap.enabled = false; // Disable heavy shadows
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.15;
@@ -142,6 +142,7 @@ export class FarmScene {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.08;
+    this.controls.enableZoom = false; // Prevents 3D scene from hijacking page scrolling!
     this.controls.maxPolarAngle = Math.PI / 2 - 0.04; // Don't clip below ground
     this.controls.minDistance = 1.2; // Allow close inspection of chassis & crops
     this.controls.maxDistance = 65.0;
@@ -278,7 +279,7 @@ export class FarmScene {
   // ───────────────────────────────────────────────────────────────────────────
   private setupTerrainAndScenery() {
     // 1. Base Soil Plane (Tilled agricultural brown earth)
-    const groundGeom = new THREE.PlaneGeometry(this.fieldWidth + 12, this.fieldLength + 12, 32, 32);
+    const groundGeom = new THREE.PlaneGeometry(this.fieldWidth + 12, this.fieldLength + 12, 1, 1);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x422f20, // Natural dark farm soil
       roughness: 0.95,
@@ -331,7 +332,7 @@ export class FarmScene {
       this.scene.add(ridge);
 
       // Black Drip Irrigation Line resting on ridge alongside crop roots
-      const tubeGeom = new THREE.CylinderGeometry(0.016, 0.016, 32.0, 8);
+      const tubeGeom = new THREE.CylinderGeometry(0.016, 0.016, 32.0, 4);
       const tube = new THREE.Mesh(tubeGeom, dripTubeMat);
       tube.rotation.x = Math.PI / 2;
       tube.position.set(rx + 0.28, 0.15, 0);
@@ -339,7 +340,7 @@ export class FarmScene {
 
       // Wooden Trellis Stakes spaced along the row
       for (let z = -15; z <= 15; z += 5) {
-        const stakeGeom = new THREE.CylinderGeometry(0.035, 0.035, 1.6, 8);
+        const stakeGeom = new THREE.CylinderGeometry(0.035, 0.035, 1.6, 4);
         const stake = new THREE.Mesh(stakeGeom, stakeMat);
         stake.position.set(rx, 0.8, z);
         stake.castShadow = true;
@@ -351,7 +352,7 @@ export class FarmScene {
 
     // 4. Perimeter Wooden Ranch Fence
     const fenceMat = new THREE.MeshStandardMaterial({ color: 0x6d4c31, roughness: 0.85 });
-    const postGeom = new THREE.CylinderGeometry(0.07, 0.07, 1.25, 8);
+    const postGeom = new THREE.CylinderGeometry(0.07, 0.07, 1.25, 5);
 
     const halfW = this.fieldWidth / 2 + 1.5;
     const halfL = this.fieldLength / 2 + 1.5;
@@ -387,7 +388,7 @@ export class FarmScene {
     pad.receiveShadow = true;
     this.scene.add(pad);
 
-    const tankGeom = new THREE.CylinderGeometry(0.9, 0.9, 2.2, 20);
+    const tankGeom = new THREE.CylinderGeometry(0.9, 0.9, 2.2, 12);
     const tankMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4 });
     const tank = new THREE.Mesh(tankGeom, tankMat);
     tank.position.set(-11.5, 1.35, -12.0);
@@ -408,7 +409,7 @@ export class FarmScene {
       side: THREE.DoubleSide,
     });
 
-    const tunnelGeom = new THREE.CylinderGeometry(2.0, 2.0, 7.0, 16, 1, true, 0, Math.PI);
+    const tunnelGeom = new THREE.CylinderGeometry(2.0, 2.0, 7.0, 8, 1, true, 0, Math.PI);
     const tunnel = new THREE.Mesh(tunnelGeom, hoopMat);
     tunnel.rotation.x = Math.PI / 2;
     tunnel.rotation.z = Math.PI / 2;
@@ -425,7 +426,7 @@ export class FarmScene {
     for (let x = -24; x <= 24; x += 4.5) {
       const tree = new THREE.Group();
       const trH = 1.6 + Math.random() * 0.8;
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, trH, 8), trunkMat);
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, trH, 5), trunkMat);
       trunk.position.y = trH / 2;
       tree.add(trunk);
 
@@ -588,7 +589,7 @@ export class FarmScene {
     group.position.set(plant.position.x, 0, plant.position.z);
 
     // 1. Central Woody Stalk / Stem
-    const stemGeom = new THREE.CylinderGeometry(0.022, 0.038, 0.95, 8);
+    const stemGeom = new THREE.CylinderGeometry(0.022, 0.038, 0.95, 4);
     const stem = new THREE.Mesh(stemGeom, this.stemMat);
     stem.position.y = 0.48;
     stem.castShadow = true;
@@ -613,7 +614,7 @@ export class FarmScene {
       branchGroup.rotation.z = cfg.tilt;
 
       // Slender branch twig
-      const twigGeom = new THREE.CylinderGeometry(0.008, 0.014, cfg.len, 6);
+      const twigGeom = new THREE.CylinderGeometry(0.008, 0.014, cfg.len, 3);
       const twig = new THREE.Mesh(twigGeom, this.stemMat);
       twig.position.set(cfg.len / 2, 0, 0);
       twig.rotation.z = -Math.PI / 2;
@@ -627,7 +628,7 @@ export class FarmScene {
         const leafL = 0.22 * (1 - i * 0.15);
 
         // Elongated diamond leaf blade profile
-        const leafGeom = new THREE.PlaneGeometry(leafW, leafL, 2, 2);
+        const leafGeom = new THREE.PlaneGeometry(leafW, leafL, 1, 1);
         // Add subtle natural organic curvature along leaf centerline
         const pos = leafGeom.attributes.position;
         pos.setZ(0, -0.02);
@@ -650,7 +651,7 @@ export class FarmScene {
     const numTomatoes = plant.state === 'DISEASED' ? 1 : 2;
     for (let i = 0; i < numTomatoes; i++) {
       const isRed = plant.state !== 'WARNING';
-      const fruitGeom = new THREE.SphereGeometry(0.048, 8, 8);
+      const fruitGeom = new THREE.IcosahedronGeometry(0.048, 0);
       const fruitMesh = new THREE.Mesh(fruitGeom, isRed ? this.redTomatoMat : this.greenTomatoMat);
       const ang = (i * 2.2) + Math.random();
       fruitMesh.position.set(Math.cos(ang) * 0.14, 0.38 + i * 0.12, Math.sin(ang) * 0.14);
@@ -830,6 +831,8 @@ export class FarmScene {
   // ───────────────────────────────────────────────────────────────────────────
   // Targeted Precision Spray Particles
   // ───────────────────────────────────────────────────────────────────────────
+  private sprayBeam!: THREE.Line;
+
   private setupSpraySystem() {
     const count = 160;
     this.sprayPositions = new Float32Array(count * 3);
@@ -845,8 +848,8 @@ export class FarmScene {
     geom.setAttribute('position', new THREE.BufferAttribute(this.sprayPositions, 3));
 
     const mat = new THREE.PointsMaterial({
-      color: 0x38bdf8,
-      size: 0.055,
+      color: 0x00ffff, // Bright cyan
+      size: 0.35,      // Huge particles for maximum visibility
       transparent: true,
       opacity: 0.0,
       blending: THREE.AdditiveBlending,
@@ -854,6 +857,21 @@ export class FarmScene {
 
     this.sprayParticles = new THREE.Points(geom, mat);
     this.scene.add(this.sprayParticles);
+
+    // 💥 ADD SOLID VISIBLE LASER/WATER BEAM 💥
+    const beamGeom = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, 0)
+    ]);
+    const beamMat = new THREE.LineBasicMaterial({ 
+      color: 0x00ffff, 
+      linewidth: 4, 
+      transparent: true, 
+      opacity: 0.95 
+    });
+    this.sprayBeam = new THREE.Line(beamGeom, beamMat);
+    this.sprayBeam.visible = false;
+    this.scene.add(this.sprayBeam);
   }
 
   private activeNozzleNum: 1 | 2 | 3 = 2;
@@ -865,7 +883,6 @@ export class FarmScene {
     this.activeNozzleNum = nozzleNum;
     this.activeTankNum = tankNum;
     this.sprayTargetPos.set(targetPlant.position.x, 0.45, targetPlant.position.z);
-
     // Color particles according to selected tank
     const tankColors: Record<1 | 2 | 3, number> = {
       1: 0x06b6d4, // Treatment A (Copper)
@@ -874,6 +891,7 @@ export class FarmScene {
     };
     (this.sprayParticles.material as THREE.PointsMaterial).color.setHex(tankColors[tankNum] || 0x10b981);
     (this.sprayParticles.material as THREE.PointsMaterial).opacity = 0.88;
+    this.sprayBeam.visible = true;
 
     const nozzleWorldPos = this.getNozzleWorldPosition(nozzleNum);
 
@@ -897,6 +915,7 @@ export class FarmScene {
   public deactivateSpray() {
     this.sprayActive = false;
     (this.sprayParticles.material as THREE.PointsMaterial).opacity = 0.0;
+    this.sprayBeam.visible = false;
   }
 
   public getNozzleWorldPosition(nozzleNum: 1 | 2 | 3 = 2): THREE.Vector3 {
@@ -1269,6 +1288,13 @@ export class FarmScene {
       }
     }
     this.sprayParticles.geometry.attributes.position.needsUpdate = true;
+
+    // Update the solid beam to always connect the robot's front to the target plant
+    const nozzlePos = new THREE.Vector3(this.robotX + Math.sin(this.robotHeading)*0.5, 0.85, this.robotZ - Math.cos(this.robotHeading)*0.5);
+    this.sprayBeam.geometry.setFromPoints([
+      nozzlePos,
+      this.sprayTargetPos
+    ]);
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -1350,6 +1376,9 @@ export class FarmScene {
     } else if (mode === 'FOLLOW') {
       this.followRobot = true;
       this.controls.enabled = true;
+    } else if (mode === 'BUMPER') {
+      this.followRobot = true;
+      this.controls.enabled = false;
     }
   }
 
@@ -1375,9 +1404,10 @@ export class FarmScene {
     if (canvas && !this.bumperRenderer) {
       this.bumperRenderer = new THREE.WebGLRenderer({
         canvas,
-        antialias: true,
+        antialias: false,
         powerPreference: 'low-power',
       });
+      this.bumperRenderer.setPixelRatio(0.5); // Downsample for massive speed boost
       this.bumperRenderer.setSize(canvas.clientWidth || 320, canvas.clientHeight || 180);
       this.bumperRenderer.toneMapping = THREE.ACESFilmicToneMapping;
     }
@@ -1421,6 +1451,17 @@ export class FarmScene {
     }
 
     this.controls.update();
+
+    // Snap main camera to bumper if BUMPER mode is active
+    if (this.cameraMode === 'BUMPER') {
+      const bumperWorldPos = new THREE.Vector3();
+      const bumperWorldDir = new THREE.Vector3();
+      this.bumperCamera.getWorldPosition(bumperWorldPos);
+      this.bumperCamera.getWorldDirection(bumperWorldDir);
+      
+      this.camera.position.copy(bumperWorldPos);
+      this.camera.lookAt(bumperWorldPos.clone().add(bumperWorldDir.multiplyScalar(5)));
+    }
 
     // 1. Render Main Simulation Viewport
     this.renderer.render(this.scene, this.camera);

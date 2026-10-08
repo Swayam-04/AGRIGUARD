@@ -403,13 +403,14 @@ export class SimulatorManager {
     };
   }
 
-  public approveAndSpray(operatorName: string): boolean {
-    if (!this.detectedPlant) {
+  public approveAndSpray(operatorName: string, targetOverride?: FarmPlant): boolean {
+    const target = targetOverride || this.detectedPlant;
+    if (!target) {
       this.addLog('ALERT', 'Treatment rejected: No plant target acquired.');
       return false;
     }
 
-    const plant = this.detectedPlant;
+    const plant = target;
     if (plant.state === 'TREATED') {
       this.addLog('INFO', `Target ${plant.id} is already TREATED. Additional spray skipped.`);
       return false;

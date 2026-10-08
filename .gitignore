@@ -49,4 +49,5 @@ scratch/
 runs/*.json
 models/agriguard_last.pth
 
-
+PlantVillage-Dataset/
+PlantVillage_Combined/

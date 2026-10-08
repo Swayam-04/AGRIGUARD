@@ -257,7 +257,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {/* Movement Badge */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(8px)',
+            
             border: '1px solid rgba(255, 255, 255, 0.12)',
             borderRadius: '8px',
             padding: '6px 10px',
@@ -295,7 +295,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {/* Precision Sprayer Badge */}
           <div style={{
             background: isSpraying ? 'rgba(6, 182, 212, 0.2)' : 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(8px)',
+            
             border: `1px solid ${isSpraying ? 'rgba(6, 182, 212, 0.5)' : 'rgba(255, 255, 255, 0.12)'}`,
             borderRadius: '8px',
             padding: '6px 10px',
@@ -331,7 +331,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {isObstacleDetected && (
             <div style={{
               background: 'rgba(244, 63, 94, 0.25)',
-              backdropFilter: 'blur(8px)',
+              
               border: '1px solid var(--rose-500)',
               borderRadius: '8px',
               padding: '6px 10px',
@@ -351,7 +351,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {/* Ultrasonic Tri-Zone Proximity HUD */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(8px)',
+            
             border: '1px solid rgba(255, 255, 255, 0.12)',
             borderRadius: '8px',
             padding: '6px 10px',
@@ -390,7 +390,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
         }}>
           <div style={{
             background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(8px)',
+            
             border: '1px solid rgba(255, 255, 255, 0.12)',
             borderRadius: '8px',
             padding: '5px 9px',
@@ -409,7 +409,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {telemetry?.battery_voltage && (
             <div style={{
               background: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(8px)',
+              
               border: '1px solid rgba(255, 255, 255, 0.12)',
               borderRadius: '8px',
               padding: '5px 9px',
@@ -438,7 +438,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {/* Soil Moisture */}
           <div style={{
             background: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(8px)',
+            
             border: '1px solid rgba(255, 255, 255, 0.12)',
             borderRadius: '8px',
             padding: '5px 9px',
@@ -456,7 +456,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {tempC != null && (
             <div style={{
               background: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(8px)',
+              
               border: '1px solid rgba(255, 255, 255, 0.12)',
               borderRadius: '8px',
               padding: '5px 9px',
@@ -476,7 +476,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
           {npkN != null && (
             <div style={{
               background: 'rgba(15, 23, 42, 0.85)',
-              backdropFilter: 'blur(8px)',
+              
               border: '1px solid rgba(255, 255, 255, 0.12)',
               borderRadius: '8px',
               padding: '5px 9px',
@@ -499,7 +499,7 @@ export const AgriGuardTwin: React.FC<AgriGuardTwinProps> = ({ telemetry }) => {
             position: 'absolute',
             inset: 0,
             background: 'rgba(5, 8, 15, 0.75)',
-            backdropFilter: 'blur(4px)',
+            
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
