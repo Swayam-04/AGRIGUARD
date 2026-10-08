@@ -1,0 +1,8 @@
+[project]
+name = "agriguard"
+version = "2.0.0"
+description = "AgriGuard Autonomous Precision Agricultural Rover"
+requires-python = ">=3.10"
+
+[tool.vercel]
+entrypoint = "backend.main:app"
