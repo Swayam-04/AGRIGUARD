@@ -2,7 +2,6 @@ import React from 'react';
 import {
   LayoutDashboard,
   Map,
-  Gamepad2,
   Stethoscope,
   Leaf,
   Activity,
@@ -16,7 +15,6 @@ import { TelemetryData } from '../types';
 
 export type TabId =
   | 'dashboard'
-  | 'remote'
   | 'disease'
   | 'heatmap'
   | 'simulation'
@@ -36,7 +34,6 @@ interface SidebarNavProps {
 
 const navItems: { id: TabId; label: string; icon: React.ElementType; section?: string }[] = [
   { id: 'dashboard',     label: 'Dashboard',             icon: LayoutDashboard, section: 'OPERATIONS' },
-  { id: 'remote',        label: 'Field Remote Cockpit',   icon: Gamepad2 },
   { id: 'disease',       label: 'Crop Disease AI & Lab',  icon: Microscope },
   { id: 'heatmap',       label: 'Field Monitor Camera',   icon: Map },
   { id: 'weeds',         label: 'Weed Management',        icon: Crosshair },

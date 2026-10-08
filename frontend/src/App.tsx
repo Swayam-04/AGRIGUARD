@@ -13,7 +13,6 @@ import { AgriGuardTwin } from './digitalTwin/AgriGuardTwin';
 import { SimulatedViewPage } from './simulator/SimulatedViewPage';
 import { WeedManagementPage } from './pages/WeedManagementPage';
 import { EnvironmentalImpactCard } from './components/EnvironmentalImpactCard';
-import { FieldRemotePage } from './pages/FieldRemotePage';
 import { DiseaseDetectPage } from './pages/DiseaseDetectPage';
 import { AIDetection, TreatmentDecision } from './types';
 import {
@@ -31,7 +30,6 @@ import {
   ShieldCheck,
   Radio,
   Map,
-  Gamepad2,
   Zap,
   AlertTriangle,
   ShieldAlert,
@@ -42,7 +40,6 @@ import {
 // ─── Page meta ─────────────────────────────────────────────────────────────
 const PAGE_META: Record<TabId, { title: string; section: string }> = {
   dashboard:     { title: 'Dashboard',             section: 'Operations' },
-  remote:        { title: 'Field Remote Cockpit',   section: 'Operations' },
   disease:       { title: 'Crop Disease AI & Lab',  section: 'AI & Vision' },
   heatmap:       { title: 'Field Monitor Camera',   section: 'Operations' },
   weeds:         { title: 'Weed Management',        section: 'Field Operations' },
@@ -263,22 +260,6 @@ export const App: React.FC = () => {
               {/* Sensor Telemetry */}
               <TelemetryCard telemetry={telemetry} />
             </div>
-          )}
-
-          {/* ━━━ ROBOT CONTROL (Cockpit) ━━━ */}
-          {activeTab === 'remote' && (
-            <FieldRemotePage
-              telemetry={telemetry}
-              lastDetection={lastDetection}
-              lastDecision={lastDecision}
-              isScanning={isScanning}
-              onTriggerScan={handleTriggerScan}
-              activeZoneId={telemetry?.active_zone_id ?? activeZoneId}
-              onMove={handleMove}
-              onStop={handleStop}
-              onEmergencyStop={handleEmergencyStop}
-              onSprayApprove={handleApproveTreatment}
-            />
           )}
 
           {/* ━━━ CROP DISEASE AI & UPLOAD LAB ━━━ */}
