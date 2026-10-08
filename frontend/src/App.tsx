@@ -19,6 +19,7 @@ import {
   sendEmergencyStop
 } from './services/api';
 import { EnvironmentalImpactCard } from './components/EnvironmentalImpactCard';
+import { FieldRemotePage } from './pages/FieldRemotePage';
 
 export const App: React.FC = () => {
   const { telemetry, wsConnected } = useTelemetry();
@@ -121,33 +122,18 @@ export const App: React.FC = () => {
         )}
 
         {activeTab === 'remote' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }}>
-            {/* Top Row: Camera & Direction Pad Side-by-Side Cockpit */}
-            <div className="remote-cockpit-layout">
-              <div className="remote-cockpit-camera">
-                <CameraView
-                  cameraStatus={telemetry?.camera_status}
-                  lastDetection={lastDetection}
-                  isScanning={isScanning}
-                  onTriggerScan={handleTriggerScan}
-                  activeZoneId={telemetry?.active_zone_id ?? activeZoneId}
-                  telemetry={telemetry}
-                  onMove={handleMove}
-                  onStop={handleStop}
-                />
-              </div>
-
-              <div className="remote-cockpit-controls">
-                <RobotControls
-                  telemetry={telemetry}
-                  onMove={handleMove}
-                  onStop={handleStop}
-                  onEmergencyStop={handleEmergencyStop}
-                  onSprayApprove={handleApproveTreatment}
-                />
-              </div>
-            </div>
-          </div>
+          <FieldRemotePage
+            telemetry={telemetry}
+            lastDetection={lastDetection}
+            lastDecision={lastDecision}
+            isScanning={isScanning}
+            onTriggerScan={handleTriggerScan}
+            activeZoneId={telemetry?.active_zone_id ?? activeZoneId}
+            onMove={handleMove}
+            onStop={handleStop}
+            onEmergencyStop={handleEmergencyStop}
+            onSprayApprove={handleApproveTreatment}
+          />
         )}
 
         {activeTab === 'simulation' && (
@@ -159,6 +145,7 @@ export const App: React.FC = () => {
             <EnvironmentalImpactCard telemetry={telemetry} />
           </div>
         )}
+
 
         {activeTab === 'diagnostics' && (
           <DiagnosticsPage />

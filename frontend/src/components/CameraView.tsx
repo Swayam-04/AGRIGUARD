@@ -15,10 +15,13 @@ import {
   Zap,
   Crosshair,
   Gauge,
-  Sliders
+  Sliders,
+  Upload
 } from 'lucide-react';
 import { AIDetection, CameraStatus, TelemetryData } from '../types';
 import { setCameraPower, releaseCamera, reclaimCamera } from '../services/api';
+import { checkIsPlantLeaf } from '../services/cropDiseaseService';
+
 
 interface CameraViewProps {
   cameraStatus?: CameraStatus;
@@ -58,6 +61,26 @@ export const CameraView: React.FC<CameraViewProps> = React.memo(({
   const [showReticle, setShowReticle] = useState(true);
   const [showDebugMetrics, setShowDebugMetrics] = useState(false);
   const [autoScan, setAutoScan] = useState(false);
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      const { isLeaf } = await checkIsPlantLeaf(base64);
+      if (!isLeaf) {
+        alert("Please upload a valid plant leaf image (at least 15% green coverage required).");
+        return;
+      }
+      onTriggerScan(base64);
+    };
+    reader.readAsDataURL(file);
+  }, [onTriggerScan]);
 
   // Performance metrics (updated only once per second for zero frame-by-frame UI re-renders)
   const [cameraFps, setCameraFps] = useState<number>(0);
@@ -959,25 +982,52 @@ export const CameraView: React.FC<CameraViewProps> = React.memo(({
           )}
         </div>
 
-        <button
-          onClick={handleTriggerScan}
-          disabled={!isEnabled || isScanning}
-          className="btn btn-primary"
-          style={{ padding: '0.65rem 1.4rem', whiteSpace: 'nowrap' }}
-          title={!isEnabled ? 'Turn ON camera to perform scan' : undefined}
-        >
-          {isScanning ? (
-            <>
-              <RefreshCw size={16} className="animate-spin" />
-              <span>Analyzing Foliage...</span>
-            </>
-          ) : (
-            <>
-              <Scan size={16} />
-              <span>Capture & AI Scan</span>
-            </>
-          )}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ padding: '0.65rem 1rem', fontSize: '0.85rem' }}
+              title="Upload leaf image specimen (<= 5MB)"
+            >
+              <Upload size={15} color="#10b981" />
+              <span>Upload Leaf</span>
+            </button>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/jpg"
+              onChange={handleFileUpload}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                opacity: 0,
+                cursor: 'pointer',
+                width: '100%',
+                height: '100%'
+              }}
+            />
+          </div>
+
+          <button
+            onClick={handleTriggerScan}
+            disabled={!isEnabled || isScanning}
+            className="btn btn-primary"
+            style={{ padding: '0.65rem 1.4rem', whiteSpace: 'nowrap' }}
+            title={!isEnabled ? 'Turn ON camera to perform scan' : undefined}
+          >
+            {isScanning ? (
+              <>
+                <RefreshCw size={16} className="animate-spin" />
+                <span>Analyzing Foliage...</span>
+              </>
+            ) : (
+              <>
+                <Scan size={16} />
+                <span>Capture & AI Scan</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

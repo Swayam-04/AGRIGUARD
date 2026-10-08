@@ -585,4 +585,74 @@ body {
   box-shadow: 0 0 8px var(--amber-400);
 }
 
+/* ========================================================
+   AGRI-DECISION-PLATFORM DESIGN SYSTEM & COLOR ACCENTS
+   ======================================================== */
+
+@keyframes leaf-wiggle {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(4deg); }
+}
+
+.hover-leaf:hover {
+  animation: leaf-wiggle 0.5s ease-in-out;
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 3s ease-in-out infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.03); }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2.5s ease-in-out infinite;
+}
+
+/* Card: Warm earthy / emerald left-accent */
+.card-earth {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 16px;
+  border-left: 4px solid #16a34a;
+  border-top: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-smooth);
+}
+
+.card-earth-red {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 16px;
+  border-left: 4px solid #ef4444;
+  border-top: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-smooth);
+}
+
+.border-l-4 {
+  border-left-width: 4px !important;
+}
+
+.border-l-emerald-500 {
+  border-left-color: #10b981 !important;
+}
+
+.border-l-red-500 {
+  border-left-color: #ef4444 !important;
+}
+
 

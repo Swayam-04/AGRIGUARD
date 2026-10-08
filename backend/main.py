@@ -769,9 +769,88 @@ async def run_real_crop_scan(req: Optional[ScanFrameRequest] = None):
     }
 
 
+class DiseaseDetectRequest(BaseModel):
+    cropType: str = "Tomato"
+    imageBase64: str
+
+
+@app.post("/api/disease-detect")
+async def api_disease_detect(req: DiseaseDetectRequest):
+    """
+    Direct disease detection endpoint ported from agri-decision-platform.
+    Accepts cropType and base64 image, runs the vision model, and returns
+    structured DiseaseDetectionResult.
+    """
+    try:
+        import base64
+        encoded = req.imageBase64
+        if "," in encoded:
+            encoded = encoded.split(",", 1)[1]
+        img_bytes = base64.b64decode(encoded)
+        np_arr = np.frombuffer(img_bytes, np.uint8)
+        frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    except Exception as e:
+        logger.warning(f"Error decoding image in disease-detect: {e}")
+        raise HTTPException(status_code=400, detail="Invalid image payload")
+
+    if frame is None or frame.size == 0:
+        raise HTTPException(status_code=400, detail="Could not decode image")
+
+    # Run AI prediction with requested crop
+    crop_name = req.cropType.lower()
+    detection = ai_detector.predict(frame, plant_id="SPECIMEN-01", crop=crop_name)
+    telemetry = esp32.fetch_real_telemetry()
+    decision = treatment_engine.evaluate(detection, telemetry)
+
+    disease_name = detection.get("display_name", "Unknown")
+    confidence = float(detection.get("confidence", 0.85))
+    severity_val = detection.get("severity", "none").capitalize()
+    if severity_val in ["None", "Zero"]:
+        severity = "Healthy" if detection.get("disease") == "healthy" else "Low"
+    elif severity_val in ["Low", "Medium", "High", "Healthy"]:
+        severity = severity_val
+    else:
+        severity = "Medium"
+
+    infected_area_pct = int(detection.get("affected_area", 0.0) * 100)
+    infection_area = f"{max(5, infected_area_pct)}%" if severity != "Healthy" else "0%"
+    is_stable = bool(confidence >= 0.70 and detection.get("status") != "LOW_CONFIDENCE")
+
+    remedies = []
+    if decision.get("recommended_treatment"):
+        trt = decision["recommended_treatment"]
+        remedies.append(f"Apply {trt.get('trade_name', 'Fungicide')} — {trt.get('dosage_description', 'Standard dilution')}")
+        if trt.get("safety_instructions"):
+            remedies.append(trt["safety_instructions"])
+
+    preventive = [
+        "Maintain adequate plant spacing to encourage canopy airflow.",
+        "Avoid overhead sprinkler irrigation; prioritize root drip irrigation.",
+        "Inspect lower canopy leaves weekly for early signs of lesions."
+    ]
+
+    top_predictions = [
+        {"label": disease_name, "confidence": round(confidence, 2)},
+        {"label": "Healthy" if disease_name != "Healthy" else "Heat Stress", "confidence": round(max(0.04, 1.0 - confidence), 2)}
+    ]
+
+    return {
+        "diseaseName": disease_name,
+        "severity": severity,
+        "confidence": round(confidence, 2),
+        "infectionArea": infection_area,
+        "isStable": is_stable,
+        "description": f"Observed {disease_name} characteristics on {req.cropType} specimen. Health score evaluated at {detection.get('plant_health_score', 85)}/100.",
+        "remedies": remedies,
+        "preventiveMeasures": preventive,
+        "topPredictions": top_predictions
+    }
+
+
 # ==========================================
 # 5. FARMER APPROVAL & VERIFIED SPRAY GATE
 # ==========================================
+
 
 class ApprovalRequest(BaseModel):
     decision_id: str

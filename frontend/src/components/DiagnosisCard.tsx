@@ -71,6 +71,17 @@ export const DiagnosisCard: React.FC<DiagnosisCardProps> = ({ detection, telemet
       <div style={{
         padding: '1rem',
         borderRadius: 'var(--radius-md)',
+        borderLeft: `4px solid ${
+          isHuman
+            ? '#ef4444'
+            : isHealthy
+              ? '#10b981'
+              : isLowConfidence
+                ? '#f59e0b'
+                : isNonTarget
+                  ? '#64748b'
+                  : '#ef4444'
+        }`,
         background: isHuman
           ? 'rgba(239, 68, 68, 0.15)'
           : isNonTarget

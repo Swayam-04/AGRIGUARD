@@ -10,7 +10,8 @@ import {
   Gamepad2,
   Stethoscope,
   Boxes,
-  Leaf
+  Leaf,
+  Microscope
 } from 'lucide-react';
 import { TelemetryData } from '../types';
 
@@ -39,11 +40,13 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'remote' as const, label: 'Field Remote', icon: Gamepad2 },
+    { id: 'remote' as const, label: 'Field Remote & Crop AI', icon: Gamepad2 },
     { id: 'simulation' as const, label: 'Simulated View', icon: Boxes },
     { id: 'environmental' as const, label: 'Environmental Impact', icon: Leaf },
     { id: 'diagnostics' as const, label: 'Hardware Diagnostics', icon: Stethoscope }
   ];
+
+
 
   return (
     <div className="glass-panel sidebar-header-panel" style={{

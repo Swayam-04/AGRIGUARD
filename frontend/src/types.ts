@@ -295,3 +295,45 @@ export interface NetworkStatus {
   offline_ready: boolean;
   watchdog_timeout_ms: number;
 }
+
+export type CropType =
+  | "Rice"
+  | "Wheat"
+  | "Cotton"
+  | "Sugarcane"
+  | "Tomato"
+  | "Potato"
+  | "Onion"
+  | "Maize"
+  | "Soybean"
+  | "Groundnut"
+  | "Pepper"
+  | "Beans";
+
+export const CROP_LIST: CropType[] = [
+  "Rice",
+  "Wheat",
+  "Cotton",
+  "Sugarcane",
+  "Tomato",
+  "Potato",
+  "Onion",
+  "Maize",
+  "Soybean",
+  "Groundnut",
+  "Pepper",
+  "Beans",
+];
+
+export interface DiseaseDetectionResult {
+  diseaseName: string;
+  severity: "Low" | "Medium" | "High" | "Healthy";
+  confidence: number;
+  infectionArea?: string;
+  isStable?: boolean;
+  description: string;
+  remedies: string[];
+  preventiveMeasures: string[];
+  topPredictions?: { label: string; confidence: number }[];
+}
+

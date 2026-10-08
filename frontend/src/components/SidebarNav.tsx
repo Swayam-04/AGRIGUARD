@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Gamepad2, Map, Stethoscope, ChevronRight, Wifi, ShieldAlert, Cpu } from 'lucide-react';
+import { LayoutDashboard, Gamepad2, Map, Stethoscope, ChevronRight, Wifi, ShieldAlert, Cpu, Microscope } from 'lucide-react';
 import { TelemetryData } from '../types';
 
 interface SidebarNavProps {
@@ -27,11 +27,12 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     },
     {
       id: 'remote' as const,
-      label: 'Field Remote',
-      desc: '4WD Chassis Teleoperation',
+      label: 'Field Remote & Crop AI',
+      desc: 'Teleoperation & Leaf Pathology',
       icon: Gamepad2,
       badge: esp32Connected ? 'READY' : 'OFFLINE'
     },
+
     {
       id: 'heatmap' as const,
       label: 'Field Heatmap',
@@ -47,6 +48,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       badge: 'HIL'
     }
   ];
+
 
   return (
     <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
