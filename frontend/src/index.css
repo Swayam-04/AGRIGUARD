@@ -360,6 +360,7 @@ h1, h2, h3, h4 {
 .fps-badge.healthy { border-color: var(--green-300); color: var(--green-700); background: var(--green-50); }
 .fps-badge.degraded { border-color: var(--warning-border); color: #9A6D0A; background: var(--warning-bg); }
 .fps-badge.critical { border-color: var(--danger-border); color: var(--danger-dark); background: var(--danger-bg); }
+.fps-badge.neutral { border-color: var(--border); color: var(--text-muted); background: var(--bg-subtle); }
 
 .fps-dot {
   width: 6px;
@@ -1307,11 +1308,93 @@ input[type="range"]:disabled {
 .min-w-0 { min-width: 0; }
 
 /* ────────────────────────────────────────────────────
-   RESPONSIVE
+   RESPONSIVE & SIDEBAR DRAWER
    ──────────────────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .sidebar { display: none; }
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+  }
 }
+
+/* Glass action buttons for dark cards & modals */
+.btn-glass {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #F8FAFC;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  user-select: none;
+  font-family: 'Inter', sans-serif;
+  text-decoration: none;
+}
+
+.btn-glass:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #FFFFFF;
+}
+
+.btn-glass.btn-glass-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: var(--emerald-400);
+}
+
+.btn-glass.btn-glass-emerald:hover {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34D399;
+}
+
+.btn-glass.btn-glass-sky {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: var(--sky-400);
+}
+
+.btn-glass.btn-glass-sky:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #38BDF8;
+}
+
+.btn-glass.btn-glass-amber {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: var(--amber-400);
+}
+
+.btn-glass.btn-glass-amber:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #FBBF24;
+}
+
 
 /* ────────────────────────────────────────────────────
    LEGACY COMPAT — for unchanged inner components

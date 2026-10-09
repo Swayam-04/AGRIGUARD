@@ -125,6 +125,8 @@ export const App: React.FC = () => {
   const humidity = telemetry?.dht22?.humidity ?? telemetry?.environment?.humidity_pct ?? null;
   const robotStatus = isSimulation ? 'Simulation Mode · Active' : esp32Connected ? 'ESP32 Connected' : 'Hardware Disconnected';
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="app-shell">
       {/* ── Left Sidebar ── */}
@@ -135,6 +137,8 @@ export const App: React.FC = () => {
         wsConnected={wsConnected}
         operatingMode={operatingMode}
         onModeSwitch={handleModeSwitch}
+        mobileOpen={mobileMenuOpen}
+        onCloseMobile={() => setMobileMenuOpen(false)}
       />
 
       {/* ── Main Area ── */}
@@ -149,6 +153,7 @@ export const App: React.FC = () => {
           operatingMode={operatingMode}
           onModeSwitch={handleModeSwitch}
           onOpenConnect={() => setActiveTab('devices')}
+          onToggleSidebar={() => setMobileMenuOpen((prev) => !prev)}
         />
 
         {/* Page Content */}

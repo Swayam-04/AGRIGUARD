@@ -226,20 +226,9 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
           <button
             type="button"
+            id="env-load-benchmark-btn"
             onClick={handleLoadDeterministicBenchmark}
-            className="btn btn-outline"
-            style={{
-              padding: '0.35rem 0.75rem',
-              fontSize: '0.72rem',
-              borderRadius: '8px',
-              color: 'var(--emerald-400)',
-              border: '1px solid rgba(16, 185, 129, 0.35)',
-              background: 'rgba(16, 185, 129, 0.08)',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}
+            className="btn-glass btn-glass-emerald"
             title="Load Deterministic Benchmark (100 m² Field, 18 m² Treated, 420 mL Spray, 0.18 kWh)"
           >
             <Sparkles size={13} />
@@ -248,78 +237,43 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
           <button
             type="button"
+            id="env-view-calc-btn"
             onClick={() => setIsCalcModalOpen(true)}
-            className="btn btn-outline"
-            style={{
-              padding: '0.35rem 0.7rem',
-              fontSize: '0.72rem',
-              borderRadius: '8px',
-              color: '#fff',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}
+            className="btn-glass btn-glass-sky"
             title="Inspect Step-by-Step Mathematical Calculations"
           >
-            <Calculator size={13} color="var(--sky-400)" />
+            <Calculator size={13} />
             <span>View Calculation</span>
           </button>
 
           <button
             type="button"
+            id="env-assumptions-btn"
             onClick={() => setIsConfigModalOpen(true)}
-            className="btn btn-outline"
-            style={{
-              padding: '0.35rem 0.7rem',
-              fontSize: '0.72rem',
-              borderRadius: '8px',
-              color: '#fff',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}
+            className="btn-glass btn-glass-amber"
             title="Configure Field Geometry, Baseline Rates, and Emission Factors"
           >
-            <Sliders size={13} color="var(--amber-400)" />
+            <Sliders size={13} />
             <span>Assumptions</span>
           </button>
 
           <button
             type="button"
+            id="env-export-json-btn"
             onClick={handleExportJson}
-            className="btn btn-outline"
-            style={{
-              padding: '0.35rem 0.65rem',
-              fontSize: '0.72rem',
-              borderRadius: '8px',
-              color: '#fff',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}
+            className="btn-glass"
             title="Export Verified Audit Report JSON"
           >
-            <Download size={13} />
+            <Download size={13} color="var(--emerald-400)" />
             <span>Export JSON</span>
           </button>
 
           <button
             type="button"
+            id="env-reset-counters-btn"
             onClick={() => carbonCalculator.reset()}
-            className="btn btn-outline"
-            style={{
-              padding: '0.35rem 0.5rem',
-              fontSize: '0.72rem',
-              borderRadius: '8px',
-              color: 'var(--text-muted)',
-              border: '1px solid rgba(255, 255, 255, 0.14)'
-            }}
+            className="btn-glass"
+            style={{ padding: '5px 8px' }}
             title="Reset Environmental Counters"
           >
             <RotateCcw size={13} />
@@ -637,13 +591,10 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
         <button
           type="button"
           onClick={() => setIsLogModalOpen(true)}
-          className="btn btn-outline"
+          className="btn-glass btn-glass-sky"
           style={{
             fontSize: '0.64rem',
             padding: '0.2rem 0.55rem',
-            borderRadius: '6px',
-            color: 'var(--sky-400)',
-            borderColor: 'rgba(56, 189, 248, 0.3)',
             flexShrink: 0,
             marginLeft: '1rem'
           }}
@@ -719,13 +670,8 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               <button
                 type="button"
                 onClick={() => setIsCalcModalOpen(false)}
-                className="btn btn-outline"
-                style={{
-                  padding: '0.4rem',
-                  borderRadius: '8px',
-                  color: 'var(--text-muted)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)'
-                }}
+                className="btn-glass"
+                style={{ padding: '0.4rem', borderRadius: '8px' }}
                 aria-label="Close"
               >
                 <X size={18} />
@@ -1103,8 +1049,8 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               <button
                 type="button"
                 onClick={() => setIsConfigModalOpen(false)}
-                className="btn btn-outline"
-                style={{ padding: '0.3rem', borderRadius: '8px', color: 'var(--text-muted)' }}
+                className="btn-glass"
+                style={{ padding: '0.35rem', borderRadius: '8px' }}
               >
                 <X size={16} />
               </button>
@@ -1301,13 +1247,10 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                 <button
                   type="button"
                   onClick={handleSetUnconfigured}
-                  className="btn btn-outline"
+                  className="btn-glass btn-glass-amber"
                   style={{
                     fontSize: '0.70rem',
-                    padding: '0.4rem 0.75rem',
-                    borderRadius: '8px',
-                    color: 'var(--amber-400)',
-                    borderColor: 'rgba(245, 158, 11, 0.35)'
+                    padding: '0.4rem 0.75rem'
                   }}
                 >
                   Clear to Unconfigured Mode
@@ -1317,8 +1260,8 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                   <button
                     type="button"
                     onClick={() => setIsConfigModalOpen(false)}
-                    className="btn btn-outline"
-                    style={{ fontSize: '0.74rem', padding: '0.45rem 0.95rem', borderRadius: '8px' }}
+                    className="btn-glass"
+                    style={{ fontSize: '0.74rem', padding: '0.45rem 0.95rem' }}
                   >
                     Cancel
                   </button>
@@ -1404,13 +1347,8 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               <button
                 type="button"
                 onClick={() => setIsLogModalOpen(false)}
-                className="btn btn-outline"
-                style={{
-                  padding: '0.4rem',
-                  borderRadius: '8px',
-                  color: 'var(--text-muted)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)'
-                }}
+                className="btn-glass"
+                style={{ padding: '0.4rem', borderRadius: '8px' }}
                 aria-label="Close"
               >
                 <X size={18} />
@@ -1477,8 +1415,8 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               <button
                 type="button"
                 onClick={() => setIsLogModalOpen(false)}
-                className="btn btn-outline"
-                style={{ fontSize: '0.76rem', padding: '0.45rem 1.15rem', borderRadius: '8px' }}
+                className="btn-glass"
+                style={{ fontSize: '0.76rem', padding: '0.45rem 1.15rem' }}
               >
                 Close Audit Log
               </button>

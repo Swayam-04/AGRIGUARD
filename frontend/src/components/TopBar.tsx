@@ -6,7 +6,8 @@ import {
   Radio,
   Cpu,
   BatteryMedium,
-  ChevronRight
+  ChevronRight,
+  Menu
 } from 'lucide-react';
 import { TelemetryData } from '../types';
 
@@ -19,10 +20,11 @@ interface TopBarProps {
   operatingMode?: 'SIMULATION' | 'REAL_HARDWARE';
   onModeSwitch?: (mode: 'SIMULATION' | 'REAL_HARDWARE') => void;
   onOpenConnect?: () => void;
+  onToggleSidebar?: () => void;
 }
 
-/** Real moving-average FPS counter */
-function useSystemFPS(targetFPS: number = 160) {
+/** Real moving-average FPS counter calibrated for 60Hz displays */
+function useSystemFPS(targetFPS: number = 60) {
   const [fps, setFps] = useState<number | null>(null);
   const frameTimestamps = useRef<number[]>([]);
   const rafRef = useRef<number | null>(null);
@@ -51,9 +53,9 @@ function useSystemFPS(targetFPS: number = 160) {
   }, []);
 
   const status: 'healthy' | 'degraded' | 'critical' =
-    fps === null ? 'critical'
-    : fps >= targetFPS * 0.85 ? 'healthy'
-    : fps >= targetFPS * 0.5 ? 'degraded'
+    fps === null ? 'degraded'
+    : fps >= 45 ? 'healthy'
+    : fps >= 25 ? 'degraded'
     : 'critical';
 
   return { fps, status };
@@ -67,9 +69,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   onEmergencyStop,
   operatingMode,
   onModeSwitch,
-  onOpenConnect
+  onOpenConnect,
+  onToggleSidebar
 }) => {
-  const { fps: systemFPS, status: sysFPSStatus } = useSystemFPS(160);
+  const { fps: systemFPS, status: sysFPSStatus } = useSystemFPS(60);
 
   const esp32Connected = telemetry?.esp32_connected ?? false;
   const cameraConnected = telemetry?.camera_status?.connected ?? false;
@@ -83,39 +86,52 @@ export const TopBar: React.FC<TopBarProps> = ({
     ? operatingMode === 'SIMULATION'
     : (telemetry?.hardware_mode === 'SIMULATION' || telemetry?.mode === 'SIMULATION' || (!telemetry?.hardware_mode && !telemetry?.esp32_connected));
 
-  // Camera FPS quality
-  const camFPSStatus: 'healthy' | 'degraded' | 'critical' =
-    cameraFPS === null ? 'critical'
-    : cameraFPS >= 100 ? 'healthy'
-    : cameraFPS >= 60 ? 'degraded'
+  // Camera FPS quality (neutral when in standby, healthy at >= 20 FPS)
+  const camFPSStatus: 'healthy' | 'degraded' | 'critical' | 'neutral' =
+    !cameraConnected ? 'neutral'
+    : cameraFPS === null ? 'neutral'
+    : cameraFPS >= 20 ? 'healthy'
+    : cameraFPS >= 10 ? 'degraded'
     : 'critical';
-
-  // Robot chip status
-  let robotChipClass = 'simulation';
-  let robotChipLabel = 'Simulation · Active';
-  if (!isSimulation) {
-    if (esp32Connected) {
-      robotChipClass = 'connected';
-      robotChipLabel = pingMs ? `ESP32 · ${pingMs}ms` : 'ESP32 · Connected';
-    } else {
-      robotChipClass = 'disconnected';
-      robotChipLabel = 'ESP32 · Offline';
-    }
-  }
 
   return (
     <div className="topbar">
-      {/* Left: Breadcrumb */}
-      <div className="topbar-breadcrumb">
-        <span>Greenovators</span>
-        <ChevronRight size={13} className="topbar-breadcrumb-sep" />
-        {pageSection && (
-          <>
-            <span>{pageSection}</span>
-            <ChevronRight size={13} className="topbar-breadcrumb-sep" />
-          </>
+      {/* Left: Mobile hamburger menu toggle + Breadcrumb */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        {onToggleSidebar && (
+          <button
+            type="button"
+            id="topbar-mobile-menu-btn"
+            onClick={onToggleSidebar}
+            className="topbar-menu-toggle"
+            title="Toggle Navigation Menu"
+            style={{
+              display: 'none',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-primary)',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '6px'
+            }}
+          >
+            <Menu size={18} />
+          </button>
         )}
-        <span className="topbar-breadcrumb-current">{pageTitle}</span>
+
+        <div className="topbar-breadcrumb">
+          <span>Greenovators</span>
+          <ChevronRight size={13} className="topbar-breadcrumb-sep" />
+          {pageSection && (
+            <>
+              <span>{pageSection}</span>
+              <ChevronRight size={13} className="topbar-breadcrumb-sep" />
+            </>
+          )}
+          <span className="topbar-breadcrumb-current">{pageTitle}</span>
+        </div>
       </div>
 
       <div className="topbar-spacer" />
@@ -127,7 +143,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           id="topbar-mode-sim-btn"
           onClick={() => onModeSwitch?.('SIMULATION')}
           className={`topbar-mode-btn ${isSimulation ? 'active-sim' : ''}`}
-          title="Simulation Mode: Safe virtual test sandbox, 3D digital twin & live physics"
+          title="Simulation Mode: Safe virtual test sandbox with 3D digital twin & live physics"
         >
           <span className={`mode-dot ${isSimulation ? 'sim-pulse' : ''}`} />
           <Radio size={12} />
@@ -152,7 +168,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         </button>
       </div>
 
-      {/* FPS Indicators */}
+      {/* FPS Indicators (SYS 60 FPS is healthy green; CAM shows Standby when inactive) */}
       <div className="topbar-fps-group">
         <div className={`fps-badge ${sysFPSStatus}`}>
           <span className="fps-dot" />
@@ -161,25 +177,23 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className={`fps-badge ${camFPSStatus}`}>
           <span className="fps-dot" />
           <Camera size={11} />
-          <span>CAM {cameraFPS !== null ? `${cameraFPS} FPS` : cameraConnected ? '…' : '-- FPS'}</span>
+          <span>CAM {cameraConnected && cameraFPS !== null ? `${cameraFPS} FPS` : 'Standby'}</span>
         </div>
       </div>
 
-      {/* Status chips */}
+      {/* Status chips (Hardware chip only needed in Real Hardware mode, avoiding duplication) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div
-          className={`topbar-chip ${robotChipClass}`}
-          onClick={!isSimulation && !esp32Connected && onOpenConnect ? onOpenConnect : undefined}
-          style={!isSimulation && !esp32Connected && onOpenConnect ? { cursor: 'pointer' } : {}}
-          title={!isSimulation && !esp32Connected ? 'Physical ESP32 is offline. Click to connect or switch back to Simulation.' : undefined}
-        >
-          {isSimulation ? (
-            <span className="sidebar-status-dot online pulse" style={{ width: 6, height: 6, background: '#2563EB', boxShadow: '0 0 6px #3B82F6' }} />
-          ) : (
+        {!isSimulation && (
+          <div
+            className={`topbar-chip ${esp32Connected ? 'connected' : 'disconnected'}`}
+            onClick={!esp32Connected && onOpenConnect ? onOpenConnect : undefined}
+            style={!esp32Connected && onOpenConnect ? { cursor: 'pointer' } : {}}
+            title={!esp32Connected ? 'Physical ESP32 is offline. Click to connect.' : undefined}
+          >
             <Radio size={11} />
-          )}
-          <span>{robotChipLabel}</span>
-        </div>
+            <span>{esp32Connected ? (pingMs ? `ESP32 · ${pingMs}ms` : 'ESP32 · Connected') : 'ESP32 · Offline'}</span>
+          </div>
+        )}
 
         <div className={`topbar-chip ${wsConnected ? 'connected' : 'disconnected'}`}>
           <Wifi size={11} />

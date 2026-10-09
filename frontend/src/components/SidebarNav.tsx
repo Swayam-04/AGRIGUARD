@@ -9,7 +9,8 @@ import {
   ScrollText,
   MonitorPlay,
   Crosshair,
-  Microscope
+  Microscope,
+  X
 } from 'lucide-react';
 import { TelemetryData } from '../types';
 
@@ -32,6 +33,8 @@ interface SidebarNavProps {
   wsConnected: boolean;
   operatingMode?: 'SIMULATION' | 'REAL_HARDWARE';
   onModeSwitch?: (mode: 'SIMULATION' | 'REAL_HARDWARE') => void;
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 const navItems: { id: TabId; label: string; icon: React.ElementType; section?: string }[] = [
@@ -53,7 +56,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   telemetry,
   wsConnected,
   operatingMode,
-  onModeSwitch
+  onModeSwitch,
+  mobileOpen,
+  onCloseMobile
 }) => {
   const esp32Connected = telemetry?.esp32_connected ?? false;
   const isSimulation = operatingMode
@@ -66,40 +71,68 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   const robotLabel = isSimulation ? 'Simulation Mode' : (esp32Connected ? (pingMs ? `ESP32 · ${pingMs}ms` : 'Connected') : 'Hardware Offline');
 
   return (
-    <div className="sidebar">
-      {/* Brand */}
-      <div className="sidebar-brand">
-        <div className="sidebar-brand-icon">
-          <Leaf size={18} color="#FFFFFF" />
+    <>
+      {mobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+      <div className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
+        {/* Brand */}
+        <div className="sidebar-brand">
+          <div className="sidebar-brand-icon">
+            <Leaf size={18} color="#FFFFFF" />
+          </div>
+          <div className="sidebar-brand-text" style={{ flex: 1 }}>
+            <span className="sidebar-brand-name">AgriGuard</span>
+            <span className="sidebar-brand-sub">Greenovators · v2.0</span>
+          </div>
+          {onCloseMobile && (
+            <button
+              type="button"
+              onClick={onCloseMobile}
+              style={{
+                display: mobileOpen ? 'inline-flex' : 'none',
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                padding: '4px'
+              }}
+              title="Close Navigation"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
-        <div className="sidebar-brand-text">
-          <span className="sidebar-brand-name">AgriGuard</span>
-          <span className="sidebar-brand-sub">Greenovators · v2.0</span>
-        </div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="sidebar-nav">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <React.Fragment key={item.id}>
-              {item.section && (
-                <div className="sidebar-section-label">{item.section}</div>
-              )}
-              <button
-                id={`nav-${item.id}`}
-                className={`nav-item ${isActive ? 'active' : ''}`}
-                onClick={() => setActiveTab(item.id)}
-              >
-                <span className="nav-item-icon"><Icon size={15} /></span>
-                {item.label}
-              </button>
-            </React.Fragment>
-          );
-        })}
-      </nav>
+        {/* Navigation */}
+        <nav className="sidebar-nav">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <React.Fragment key={item.id}>
+                {item.section && (
+                  <div className="sidebar-section-label">{item.section}</div>
+                )}
+                <button
+                  id={`nav-${item.id}`}
+                  className={`nav-item ${isActive ? 'active' : ''}`}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    onCloseMobile?.();
+                  }}
+                >
+                  <span className="nav-item-icon"><Icon size={15} /></span>
+                  {item.label}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </nav>
 
       {/* Footer live status */}
       <div className="sidebar-footer">
@@ -141,5 +174,6 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         </div>
       </div>
     </div>
+  </>
   );
 };
