@@ -28,8 +28,11 @@ if sys.prefix == sys.base_prefix and venv_python.is_file() and os.environ.get("_
     import subprocess
     os.environ["_AGRIGUARD_VENV_ACTIVE"] = "1"
     print(f"[*] AgriGuard: Auto-routing to project virtualenv ({venv_python})...")
-    ret = subprocess.run([str(venv_python)] + sys.argv)
-    sys.exit(ret.returncode)
+    try:
+        ret = subprocess.run([str(venv_python)] + sys.argv)
+        sys.exit(ret.returncode)
+    except KeyboardInterrupt:
+        sys.exit(0)
 
 import uvicorn
 
@@ -79,4 +82,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n[*] AgriGuard server terminated gracefully.")
+        sys.exit(0)

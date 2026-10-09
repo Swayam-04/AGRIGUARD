@@ -30,6 +30,8 @@ interface SidebarNavProps {
   setActiveTab: (tab: TabId) => void;
   telemetry: TelemetryData | null;
   wsConnected: boolean;
+  operatingMode?: 'SIMULATION' | 'REAL_HARDWARE';
+  onModeSwitch?: (mode: 'SIMULATION' | 'REAL_HARDWARE') => void;
 }
 
 const navItems: { id: TabId; label: string; icon: React.ElementType; section?: string }[] = [
@@ -49,17 +51,19 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeTab,
   setActiveTab,
   telemetry,
-  wsConnected
+  wsConnected,
+  operatingMode,
+  onModeSwitch
 }) => {
   const esp32Connected = telemetry?.esp32_connected ?? false;
-  const isSimulation = telemetry?.hardware_mode === 'SIMULATION' || telemetry?.mode === 'SIMULATION';
+  const isSimulation = operatingMode
+    ? operatingMode === 'SIMULATION'
+    : (telemetry?.hardware_mode === 'SIMULATION' || telemetry?.mode === 'SIMULATION' || (!telemetry?.hardware_mode && !telemetry?.esp32_connected));
   const cameraOk = telemetry?.camera_status?.connected ?? false;
   const pingMs = telemetry?.esp32_ping_ms ?? null;
 
-  const robotStatus = isSimulation ? 'warning'
-    : esp32Connected ? 'online' : 'offline';
-  const robotLabel = isSimulation ? 'Simulation'
-    : esp32Connected ? (pingMs ? `${pingMs}ms` : 'Connected') : 'Disconnected';
+  const robotStatus = isSimulation ? 'online' : (esp32Connected ? 'online' : 'offline');
+  const robotLabel = isSimulation ? 'Simulation Mode' : (esp32Connected ? (pingMs ? `ESP32 · ${pingMs}ms` : 'Connected') : 'Hardware Offline');
 
   return (
     <div className="sidebar">
@@ -100,10 +104,27 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       {/* Footer live status */}
       <div className="sidebar-footer">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div className="sidebar-status-pill">
-            <span className={`sidebar-status-dot ${robotStatus} ${robotStatus === 'online' ? 'pulse' : ''}`} />
-            <span className="sidebar-status-label">Robot</span>
-            <span className="sidebar-status-value">{robotLabel}</span>
+          <div
+            className="sidebar-status-pill"
+            style={{ cursor: onModeSwitch ? 'pointer' : 'default' }}
+            onClick={() => onModeSwitch?.(isSimulation ? 'REAL_HARDWARE' : 'SIMULATION')}
+            title="Click to toggle between Simulation Mode (Priority) and Real Hardware"
+          >
+            <span
+              className={`sidebar-status-dot ${robotStatus} ${isSimulation || esp32Connected ? 'pulse' : ''}`}
+              style={isSimulation ? { background: '#60A5FA', boxShadow: '0 0 6px #60A5FA' } : {}}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span className="sidebar-status-label" style={{ fontSize: '0.68rem' }}>Mode</span>
+                <span style={{ fontSize: '0.6rem', fontWeight: 800, color: isSimulation ? '#93C5FD' : (esp32Connected ? '#86EFAC' : '#FCA5A5'), letterSpacing: '0.04em' }}>
+                  {isSimulation ? 'SIMULATION' : 'HARDWARE'}
+                </span>
+              </div>
+              <span className="sidebar-status-value" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {robotLabel}
+              </span>
+            </div>
           </div>
           <div className="sidebar-status-pill">
             <span className={`sidebar-status-dot ${wsConnected ? 'online pulse' : 'offline'}`} />

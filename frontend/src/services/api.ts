@@ -196,10 +196,10 @@ export async function updateNetworkConfig(esp32Ip: string, esp32Port: number = 8
 export async function fetchHardwareMode(): Promise<{ mode: string; is_connected: boolean; ping_ms: number | null }> {
   try {
     const res = await fetch(`${API_BASE}/api/robot/mode`);
-    if (!res.ok) return { mode: 'REAL_HARDWARE', is_connected: false, ping_ms: null };
+    if (!res.ok) return { mode: 'SIMULATION', is_connected: true, ping_ms: 1 };
     return await res.json();
   } catch {
-    return { mode: 'REAL_HARDWARE', is_connected: false, ping_ms: null };
+    return { mode: 'SIMULATION', is_connected: true, ping_ms: 1 };
   }
 }
 

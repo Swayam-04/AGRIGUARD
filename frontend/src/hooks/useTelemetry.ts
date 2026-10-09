@@ -54,6 +54,14 @@ export function useTelemetry() {
             }
             const data: TelemetryData = raw;
 
+            // When in SIMULATION mode (Priority), ensure simulation tags and propagate data
+            if (connectionManager.getMode() === 'SIMULATION') {
+              data.mode = 'SIMULATION';
+              data.hardware_mode = 'SIMULATION';
+              setTelemetry(data);
+              return;
+            }
+
             // If in REAL_HARDWARE mode and BLE is active, BLE takes precedence
             if (connectionManager.getTransport() === 'Bluetooth' && connectionManager.isConnected()) {
               return;

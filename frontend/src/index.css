@@ -398,10 +398,98 @@ h1, h2, h3, h4 {
 }
 
 .topbar-chip.simulation {
-  background: var(--info-bg);
-  border: 1px solid #BFDBFE;
-  color: var(--info);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  color: #1D4ED8;
+  font-weight: 700;
 }
+
+/* ── TopBar Mode Switcher (Priority Simulation vs Switchable Real Hardware) ── */
+.topbar-mode-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--bg-subtle);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 3px;
+}
+
+.topbar-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  font-family: 'Inter', sans-serif;
+  user-select: none;
+}
+
+.topbar-mode-btn:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.topbar-mode-btn.active-sim {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border-color: #BFDBFE;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.15);
+}
+
+.topbar-mode-btn.active-hw {
+  background: var(--green-50);
+  color: var(--green-700);
+  border-color: var(--green-300);
+  box-shadow: 0 1px 3px rgba(46, 125, 50, 0.15);
+}
+
+.mode-pill-tag {
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.mode-pill-tag.priority {
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+.mode-pill-tag.online {
+  background: var(--green-600);
+  color: #FFFFFF;
+}
+
+.mode-pill-tag.offline {
+  background: var(--danger);
+  color: #FFFFFF;
+}
+
+.mode-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.mode-dot.sim-pulse {
+  background: #2563EB;
+  box-shadow: 0 0 6px #3B82F6;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
 
 /* E-Stop Button in topbar */
 .estop-btn {

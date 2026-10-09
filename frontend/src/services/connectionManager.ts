@@ -661,7 +661,7 @@ export class BLETransport implements IRobotTransport {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ConnectionManager {
-  private _mode: OperatingMode = 'REAL_HARDWARE';
+  private _mode: OperatingMode = 'SIMULATION';
   private _activeTransport: IRobotTransport;
   private _wifiTransport: WiFiTransport;
   private _bleTransport: BLETransport;
@@ -681,15 +681,24 @@ class ConnectionManager {
     );
 
     this._activeTransport = this._wifiTransport;
-    this._currentStatus = this._wifiTransport.getStatus();
+    this._currentStatus = {
+      state: 'CONNECTED',
+      transport: 'None',
+      mode: 'SIMULATION',
+      message: 'SIMULATION MODE ACTIVE (Priority: Safe test sandbox & full 3D twin)'
+    };
 
-    // Query initial mode from backend
+    // Query initial mode from backend; priority remains SIMULATION unless explicit hardware configured
     fetch('/api/robot/mode')
       .then((r) => r.json())
       .then((data) => {
         if (data.mode) {
           this._mode = data.mode.toUpperCase() as OperatingMode;
           this._currentStatus.mode = this._mode;
+          if (this._mode === 'SIMULATION') {
+            this._currentStatus.state = 'CONNECTED';
+            this._currentStatus.message = 'SIMULATION MODE ACTIVE (Priority)';
+          }
           this._broadcastStatus(this._currentStatus);
         }
       })

@@ -206,6 +206,7 @@ export const ConnectPanel: React.FC<ConnectPanelProps> = ({ telemetry, onConnect
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
           <button
             type="button"
+            id="connect-mode-sim-btn"
             onClick={() => handleModeSwitch('SIMULATION')}
             style={{
               padding: '0.35rem 0.8rem',
@@ -216,14 +217,21 @@ export const ConnectPanel: React.FC<ConnectPanelProps> = ({ telemetry, onConnect
               fontSize: '0.74rem',
               fontWeight: 800,
               cursor: 'pointer',
-              transition: 'all 0.15s ease'
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            SIMULATION
+            <span>SIMULATION</span>
+            <span style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: '4px', background: operatingMode === 'SIMULATION' ? '#0284C7' : 'rgba(255,255,255,0.1)', color: '#fff' }}>
+              PRIORITY
+            </span>
           </button>
 
           <button
             type="button"
+            id="connect-mode-hw-btn"
             onClick={() => handleModeSwitch('REAL_HARDWARE')}
             style={{
               padding: '0.35rem 0.8rem',
@@ -277,17 +285,17 @@ export const ConnectPanel: React.FC<ConnectPanelProps> = ({ telemetry, onConnect
           <div>
             <div style={{ fontSize: '0.82rem', fontWeight: 800, color: operatingMode === 'SIMULATION' ? 'var(--sky-400)' : isRealConnected ? 'var(--emerald-400)' : 'var(--rose-400)' }}>
               {operatingMode === 'SIMULATION'
-                ? 'MODE: SIMULATION (Safe Test Sandbox)'
+                ? 'MODE: SIMULATION (Active Priority · Safe Test Sandbox)'
                 : isRealConnected
                   ? `ROBOT: CONNECTED via ${connStatus.transport}`
-                  : 'ROBOT: DISCONNECTED'}
+                  : 'ROBOT: DISCONNECTED (Real Hardware Mode)'}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
               {operatingMode === 'SIMULATION'
-                ? 'Dynamic physics model active. No physical actuators or liquid pressurized.'
+                ? 'Simulation is prioritized as the primary testbed. Full dynamic physics and simulated sensors active. Switch to Real Hardware at any time to link physical ESP32.'
                 : isRealConnected
                   ? `Hardware: ${connStatus.deviceName || HARDWARE_CONFIG.BLE.DEVICE_NAME} · Ping: ${connStatus.pingMs != null ? `${connStatus.pingMs}ms` : '<10ms'}`
-                  : 'Physical ESP32 unreachable. Telemetry values set to offline; fake numbers blocked.'}
+                  : 'Physical ESP32 unreachable. Connect Wi-Fi or Web Bluetooth BLE to link rover, or switch back to safe Simulation mode.'}
             </div>
           </div>
         </div>
@@ -301,7 +309,7 @@ export const ConnectPanel: React.FC<ConnectPanelProps> = ({ telemetry, onConnect
           background: 'rgba(0,0,0,0.3)',
           color: operatingMode === 'SIMULATION' ? 'var(--sky-400)' : isRealConnected ? 'var(--emerald-400)' : 'var(--rose-400)'
         }}>
-          {operatingMode === 'SIMULATION' ? 'SIMULATION' : isRealConnected ? 'LIVE ESP32' : 'HARDWARE OFFLINE'}
+          {operatingMode === 'SIMULATION' ? 'SIMULATION (PRIORITY)' : isRealConnected ? 'LIVE ESP32' : 'HARDWARE OFFLINE'}
         </span>
       </div>
 

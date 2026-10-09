@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ShieldAlert,
   Wifi,
   Camera,
   Radio,
-  Zap,
+  Cpu,
   BatteryMedium,
   ChevronRight
 } from 'lucide-react';
@@ -16,6 +16,9 @@ interface TopBarProps {
   telemetry: TelemetryData | null;
   wsConnected: boolean;
   onEmergencyStop: () => void;
+  operatingMode?: 'SIMULATION' | 'REAL_HARDWARE';
+  onModeSwitch?: (mode: 'SIMULATION' | 'REAL_HARDWARE') => void;
+  onOpenConnect?: () => void;
 }
 
 /** Real moving-average FPS counter */
@@ -61,7 +64,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   pageSection,
   telemetry,
   wsConnected,
-  onEmergencyStop
+  onEmergencyStop,
+  operatingMode,
+  onModeSwitch,
+  onOpenConnect
 }) => {
   const { fps: systemFPS, status: sysFPSStatus } = useSystemFPS(160);
 
@@ -71,8 +77,11 @@ export const TopBar: React.FC<TopBarProps> = ({
   const isEStopActive = telemetry?.safety?.emergency_stop ?? false;
   const batteryPct = telemetry?.battery_percentage ?? null;
   const pingMs = telemetry?.esp32_ping_ms ?? null;
-  const isSimulation =
-    telemetry?.hardware_mode === 'SIMULATION' || telemetry?.mode === 'SIMULATION';
+
+  // Simulation mode is prioritized by default
+  const isSimulation = operatingMode
+    ? operatingMode === 'SIMULATION'
+    : (telemetry?.hardware_mode === 'SIMULATION' || telemetry?.mode === 'SIMULATION' || (!telemetry?.hardware_mode && !telemetry?.esp32_connected));
 
   // Camera FPS quality
   const camFPSStatus: 'healthy' | 'degraded' | 'critical' =
@@ -81,13 +90,17 @@ export const TopBar: React.FC<TopBarProps> = ({
     : cameraFPS >= 60 ? 'degraded'
     : 'critical';
 
-  // Robot chip type
-  let robotChipClass = 'disconnected';
-  let robotChipLabel = 'Disconnected';
-  if (isSimulation) { robotChipClass = 'simulation'; robotChipLabel = 'Simulation'; }
-  else if (esp32Connected) {
-    robotChipClass = 'connected';
-    robotChipLabel = pingMs ? `Robot · ${pingMs}ms` : 'Robot · Connected';
+  // Robot chip status
+  let robotChipClass = 'simulation';
+  let robotChipLabel = 'Simulation · Active';
+  if (!isSimulation) {
+    if (esp32Connected) {
+      robotChipClass = 'connected';
+      robotChipLabel = pingMs ? `ESP32 · ${pingMs}ms` : 'ESP32 · Connected';
+    } else {
+      robotChipClass = 'disconnected';
+      robotChipLabel = 'ESP32 · Offline';
+    }
   }
 
   return (
@@ -107,6 +120,38 @@ export const TopBar: React.FC<TopBarProps> = ({
 
       <div className="topbar-spacer" />
 
+      {/* ── Mode Switcher: Simulation (Priority) vs Real Hardware ── */}
+      <div className="topbar-mode-switcher">
+        <button
+          type="button"
+          id="topbar-mode-sim-btn"
+          onClick={() => onModeSwitch?.('SIMULATION')}
+          className={`topbar-mode-btn ${isSimulation ? 'active-sim' : ''}`}
+          title="Simulation Mode: Safe virtual test sandbox, 3D digital twin & live physics"
+        >
+          <span className={`mode-dot ${isSimulation ? 'sim-pulse' : ''}`} />
+          <Radio size={12} />
+          <span>SIMULATION</span>
+          <span className="mode-pill-tag priority">PRIORITY</span>
+        </button>
+
+        <button
+          type="button"
+          id="topbar-mode-hw-btn"
+          onClick={() => onModeSwitch?.('REAL_HARDWARE')}
+          className={`topbar-mode-btn ${!isSimulation ? 'active-hw' : ''}`}
+          title="Real Hardware Mode: Connect physical ESP32 rover via Wi-Fi or Web Bluetooth"
+        >
+          <Cpu size={12} />
+          <span>REAL HARDWARE</span>
+          {!isSimulation && (
+            <span className={`mode-pill-tag ${esp32Connected ? 'online' : 'offline'}`}>
+              {esp32Connected ? 'LIVE' : 'STANDBY'}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* FPS Indicators */}
       <div className="topbar-fps-group">
         <div className={`fps-badge ${sysFPSStatus}`}>
@@ -122,8 +167,17 @@ export const TopBar: React.FC<TopBarProps> = ({
 
       {/* Status chips */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <div className={`topbar-chip ${robotChipClass}`}>
-          <Radio size={11} />
+        <div
+          className={`topbar-chip ${robotChipClass}`}
+          onClick={!isSimulation && !esp32Connected && onOpenConnect ? onOpenConnect : undefined}
+          style={!isSimulation && !esp32Connected && onOpenConnect ? { cursor: 'pointer' } : {}}
+          title={!isSimulation && !esp32Connected ? 'Physical ESP32 is offline. Click to connect or switch back to Simulation.' : undefined}
+        >
+          {isSimulation ? (
+            <span className="sidebar-status-dot online pulse" style={{ width: 6, height: 6, background: '#2563EB', boxShadow: '0 0 6px #3B82F6' }} />
+          ) : (
+            <Radio size={11} />
+          )}
           <span>{robotChipLabel}</span>
         </div>
 
