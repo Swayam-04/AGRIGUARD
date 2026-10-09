@@ -1339,9 +1339,9 @@ input[type="range"]:disabled {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #F8FAFC;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: #F8FAFC !important;
   font-size: 0.74rem;
   font-weight: 700;
   border-radius: var(--radius-sm);
@@ -1354,45 +1354,56 @@ input[type="range"]:disabled {
 }
 
 .btn-glass:hover {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #FFFFFF !important;
 }
 
 .btn-glass.btn-glass-emerald {
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(16, 185, 129, 0.35);
-  color: var(--emerald-400);
+  background: rgba(16, 185, 129, 0.14) !important;
+  border-color: rgba(16, 185, 129, 0.38) !important;
+  color: #34D399 !important;
 }
 
 .btn-glass.btn-glass-emerald:hover {
-  background: rgba(16, 185, 129, 0.22);
-  border-color: rgba(16, 185, 129, 0.5);
-  color: #34D399;
+  background: rgba(16, 185, 129, 0.24) !important;
+  border-color: rgba(16, 185, 129, 0.55) !important;
+  color: #6EE7B7 !important;
 }
 
 .btn-glass.btn-glass-sky {
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.35);
-  color: var(--sky-400);
+  background: rgba(56, 189, 248, 0.14) !important;
+  border-color: rgba(56, 189, 248, 0.38) !important;
+  color: #38BDF8 !important;
 }
 
 .btn-glass.btn-glass-sky:hover {
-  background: rgba(56, 189, 248, 0.22);
-  border-color: rgba(56, 189, 248, 0.5);
-  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.24) !important;
+  border-color: rgba(56, 189, 248, 0.55) !important;
+  color: #7DD3FC !important;
 }
 
 .btn-glass.btn-glass-amber {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.35);
-  color: var(--amber-400);
+  background: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(245, 158, 11, 0.38) !important;
+  color: #FBBF24 !important;
 }
 
 .btn-glass.btn-glass-amber:hover {
-  background: rgba(245, 158, 11, 0.22);
-  border-color: rgba(245, 158, 11, 0.5);
-  color: #FBBF24;
+  background: rgba(245, 158, 11, 0.24) !important;
+  border-color: rgba(245, 158, 11, 0.55) !important;
+  color: #FDE68A !important;
+}
+
+/* Scoped dark theme text rules for environmental card and its modals */
+.env-impact-card,
+.env-impact-modal {
+  --text-primary: #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted: #94A3B8;
+  --text-dim: #CBD5E1;
+  --text-disabled: #64748B;
+  color: #F8FAFC;
 }
 
 

@@ -1827,11 +1827,11 @@ export const SimulatedViewPage: React.FC = () => {
             {/* Comparison Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1.25fr', gap: '0.5rem', fontSize: '0.68rem', marginBottom: '0.35rem' }}>
               <div>
-                <div style={{ color: 'var(--text-dim)', fontWeight: 700, marginBottom: '2px' }}>Conventional Baseline</div>
-                <div style={{ color: 'var(--text-muted)' }}>Baseline Spray: <strong style={{ color: '#fff' }}>{carbonImpact.baselineTreatmentVolumeMl.value.toFixed(0)} mL</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Field Area: <strong style={{ color: '#fff' }}>{carbonImpact.totalFieldAreaM2.value.toFixed(0)} m²</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>
-                  CO2e: <strong style={{ color: carbonImpact.baselineFootprintKgCO2e.value !== null ? 'var(--rose-400)' : 'var(--text-dim)' }}>
+                <div style={{ color: '#CBD5E1', fontWeight: 700, marginBottom: '2px' }}>Conventional Baseline</div>
+                <div style={{ color: '#94A3B8' }}>Baseline Spray: <strong style={{ color: '#fff' }}>{carbonImpact.baselineTreatmentVolumeMl.value.toFixed(0)} mL</strong></div>
+                <div style={{ color: '#94A3B8' }}>Field Area: <strong style={{ color: '#fff' }}>{carbonImpact.totalFieldAreaM2.value.toFixed(0)} m²</strong></div>
+                <div style={{ color: '#94A3B8' }}>
+                  CO2e: <strong style={{ color: carbonImpact.baselineFootprintKgCO2e.value !== null ? 'var(--rose-400)' : '#CBD5E1' }}>
                     {carbonImpact.baselineFootprintKgCO2e.value !== null ? `${carbonImpact.baselineFootprintKgCO2e.value.toFixed(3)} kg` : 'Unconfigured'}
                   </strong>
                 </div>
@@ -1839,11 +1839,11 @@ export const SimulatedViewPage: React.FC = () => {
 
               <div>
                 <div style={{ color: 'var(--emerald-400)', fontWeight: 700, marginBottom: '2px' }}>AgriGuard Precision</div>
-                <div style={{ color: 'var(--text-muted)' }}>Targeted Spray: <strong style={{ color: 'var(--emerald-400)' }}>{carbonImpact.agriguardTreatmentVolumeMl.value.toFixed(0)} mL</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Treated Area: <strong style={{ color: 'var(--emerald-400)' }}>{carbonImpact.treatedAreaM2.value.toFixed(1)} m² ({carbonImpact.precisionTreatmentRate.value.toFixed(0)}%)</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>Robot Energy: <strong style={{ color: 'var(--sky-400)' }}>{carbonImpact.robotEnergyKwh.value.toFixed(3)} kWh</strong></div>
-                <div style={{ color: 'var(--text-muted)' }}>
-                  CO2e: <strong style={{ color: carbonImpact.agriguardFootprintKgCO2e.value !== null ? 'var(--emerald-400)' : 'var(--text-dim)' }}>
+                <div style={{ color: '#94A3B8' }}>Targeted Spray: <strong style={{ color: 'var(--emerald-400)' }}>{carbonImpact.agriguardTreatmentVolumeMl.value.toFixed(0)} mL</strong></div>
+                <div style={{ color: '#94A3B8' }}>Treated Area: <strong style={{ color: 'var(--emerald-400)' }}>{carbonImpact.treatedAreaM2.value.toFixed(1)} m² ({carbonImpact.precisionTreatmentRate.value.toFixed(0)}%)</strong></div>
+                <div style={{ color: '#94A3B8' }}>Robot Energy: <strong style={{ color: 'var(--sky-400)' }}>{carbonImpact.robotEnergyKwh.value.toFixed(3)} kWh</strong></div>
+                <div style={{ color: '#94A3B8' }}>
+                  CO2e: <strong style={{ color: carbonImpact.agriguardFootprintKgCO2e.value !== null ? 'var(--emerald-400)' : '#CBD5E1' }}>
                     {carbonImpact.agriguardFootprintKgCO2e.value !== null ? `${carbonImpact.agriguardFootprintKgCO2e.value.toFixed(3)} kg` : 'Unconfigured'}
                   </strong>
                 </div>

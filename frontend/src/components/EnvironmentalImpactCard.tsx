@@ -174,16 +174,22 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
   };
 
   return (
-    <div className="glass-panel" style={{
+    <div className="glass-panel env-impact-card" style={{
       padding: '1.25rem',
       borderRadius: '16px',
-      border: '1px solid var(--border-subtle)',
-      background: 'rgba(11, 19, 32, 0.92)',
+      border: '1px solid rgba(255, 255, 255, 0.1)',
+      background: 'rgba(11, 19, 32, 0.94)',
       boxShadow: 'var(--shadow-glass)',
       display: 'flex',
       flexDirection: 'column',
       gap: '1rem',
-      width: '100%'
+      width: '100%',
+      color: '#F8FAFC',
+      ['--text-primary' as any]: '#FFFFFF',
+      ['--text-secondary' as any]: '#E2E8F0',
+      ['--text-muted' as any]: '#94A3B8',
+      ['--text-dim' as any]: '#CBD5E1',
+      ['--text-disabled' as any]: '#64748B'
     }}>
       {/* ── 1. Top Bar: Header & Controls ────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
@@ -216,7 +222,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                 MODE: {model.mode}
               </span>
             </div>
-            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+            <p style={{ fontSize: '0.74rem', color: '#94A3B8', margin: '2px 0 0 0' }}>
               Precision resource quantification & comparative LCA emissions model
             </p>
           </div>
@@ -298,7 +304,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>
               Chemical Saved
             </span>
             {renderSourceTag(model.chemicalSavedMl.source)}
@@ -328,7 +334,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               </div>
             )}
           </div>
-          <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.35rem' }}>
             Baseline: {model.baselineTreatmentVolumeMl.value !== null ? `${model.baselineTreatmentVolumeMl.value} mL` : 'N/A'} | Used: {model.agriguardTreatmentVolumeMl.value} mL
           </div>
         </div>
@@ -344,7 +350,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>
               Treatment Area Precision
             </span>
             {renderSourceTag(model.treatedAreaM2.source)}
@@ -368,7 +374,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               </span>
             </div>
           </div>
-          <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.35rem' }}>
             Field: {model.totalFieldAreaM2.value} m² | Unnecessary avoided: {model.unnecessaryAreaAvoidedM2.value} m²
           </div>
         </div>
@@ -384,7 +390,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>
               Estimated Avoided CO2e
             </span>
             {renderSourceTag(model.estimatedAvoidedCO2eKg.source)}
@@ -418,7 +424,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               </div>
             )}
           </div>
-          <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.35rem' }}>
             Base CO2e: {model.baselineFootprintKgCO2e.value !== null ? `${model.baselineFootprintKgCO2e.value} kg` : 'N/A'} | AgriGuard: {model.agriguardFootprintKgCO2e.value !== null ? `${model.agriguardFootprintKgCO2e.value} kg` : 'N/A'}
           </div>
         </div>
@@ -434,7 +440,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700 }}>
+            <span style={{ fontSize: '0.74rem', color: '#CBD5E1', fontWeight: 700 }}>
               Robot Energy Footprint
             </span>
             {renderSourceTag(model.robotEnergyKwh.source)}
@@ -458,7 +464,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               </span>
             </div>
           </div>
-          <div style={{ fontSize: '0.64rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
+          <div style={{ fontSize: '0.68rem', color: '#94A3B8', marginTop: '0.35rem' }}>
             Platform Power: {config.energy.averageRobotPowerW} W | Grid Factor: {config.carbonFactors.electricityKgCO2ePerKWh ?? 'N/A'} kg/kWh
           </div>
         </div>
@@ -491,29 +497,29 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.45rem', fontSize: '0.72rem' }}>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: '0.64rem' }}>Treatment Volume</div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
+              <div style={{ color: '#CBD5E1', fontSize: '0.68rem', fontWeight: 600 }}>Treatment Volume</div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
                 {model.baselineTreatmentVolumeMl.value !== null ? `${model.baselineTreatmentVolumeMl.value} mL` : 'Unconfigured'}
               </div>
             </div>
 
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: '0.64rem' }}>Treated Area</div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
+              <div style={{ color: '#CBD5E1', fontSize: '0.68rem', fontWeight: 600 }}>Treated Area</div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
                 {model.totalFieldAreaM2.value} m²
               </div>
             </div>
 
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: '0.64rem' }}>Estimated CO2e</div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
+              <div style={{ color: '#CBD5E1', fontSize: '0.68rem', fontWeight: 600 }}>Estimated CO2e</div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--rose-400)', marginTop: '2px' }}>
                 {model.baselineFootprintKgCO2e.value !== null ? `${model.baselineFootprintKgCO2e.value} kg` : 'Unconfigured'}
               </div>
             </div>
           </div>
 
-          <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+          <div style={{ fontSize: '0.70rem', color: '#94A3B8', lineHeight: 1.4 }}>
             Conventional broadcast treats 100% of the field ({model.totalFieldAreaM2.value} m²) regardless of disease distribution.
             Application rate: {config.baseline.applicationRateMlPerM2 ?? 'Not configured'} mL/m².
           </div>
@@ -540,29 +546,29 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.45rem', fontSize: '0.72rem' }}>
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: '0.64rem' }}>Targeted Volume</div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
+              <div style={{ color: '#CBD5E1', fontSize: '0.68rem', fontWeight: 600 }}>Targeted Volume</div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--emerald-400)', marginTop: '2px' }}>
                 {model.agriguardTreatmentVolumeMl.value} mL
               </div>
             </div>
 
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: '0.64rem' }}>Treated Area</div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
+              <div style={{ color: '#CBD5E1', fontSize: '0.68rem', fontWeight: 600 }}>Treated Area</div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--emerald-400)', marginTop: '2px' }}>
                 {model.treatedAreaM2.value} m²
               </div>
             </div>
 
-            <div style={{ background: 'rgba(0,0,0,0.25)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
-              <div style={{ color: 'var(--text-dim)', fontSize: '0.64rem' }}>AgriGuard CO2e</div>
+            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '0.45rem 0.55rem', borderRadius: '8px' }}>
+              <div style={{ color: '#CBD5E1', fontSize: '0.68rem', fontWeight: 600 }}>AgriGuard CO2e</div>
               <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--emerald-400)', marginTop: '2px' }}>
                 {model.agriguardFootprintKgCO2e.value !== null ? `${model.agriguardFootprintKgCO2e.value} kg` : 'Unconfigured'}
               </div>
             </div>
           </div>
 
-          <div style={{ fontSize: '0.66rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+          <div style={{ fontSize: '0.70rem', color: '#94A3B8', lineHeight: 1.4 }}>
             Sprays only confirmed pathological targets ({model.plantsTreatedCount} plant pulses recorded).
             Non-target plants spared: {model.nonTargetPlantsSparedCount} (82 m² of unnecessary blanket area avoided).
           </div>
@@ -571,21 +577,24 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
       {/* ── 4. Transparency & Scientific Integrity Note ─────────────────────── */}
       <div style={{
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        background: 'rgba(255, 255, 255, 0.03)',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
         borderRadius: '10px',
         padding: '0.65rem 0.85rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        fontSize: '0.68rem',
-        color: 'var(--text-secondary)'
+        fontSize: '0.72rem',
+        color: '#E2E8F0'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
           <ShieldCheck size={16} color="var(--emerald-400)" style={{ flexShrink: 0 }} />
           <span>
-            <strong>Scientific Integrity Principle:</strong> AgriGuard does not only perform precision treatment;
-            it quantifies the resources used and estimates the environmental impact avoided by treating only the required areas.
+            <strong style={{ color: '#FFFFFF' }}>Scientific Integrity Principle:</strong>{' '}
+            <span style={{ color: '#CBD5E1' }}>
+              AgriGuard does not only perform precision treatment;
+              it quantifies the resources used and estimates the environmental impact avoided by treating only the required areas.
+            </span>
           </span>
         </div>
         <button
@@ -593,10 +602,13 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
           onClick={() => setIsLogModalOpen(true)}
           className="btn-glass btn-glass-sky"
           style={{
-            fontSize: '0.64rem',
-            padding: '0.2rem 0.55rem',
+            fontSize: '0.68rem',
+            padding: '0.25rem 0.65rem',
             flexShrink: 0,
-            marginLeft: '1rem'
+            marginLeft: '1rem',
+            color: '#38bdf8',
+            border: '1px solid rgba(56, 189, 248, 0.35)',
+            background: 'rgba(56, 189, 248, 0.14)'
           }}
         >
           View Event Log ({model.sprayEvents.length} sprays)
@@ -625,6 +637,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            className="env-impact-modal"
             style={{
               width: '100%',
               maxWidth: '860px',
@@ -636,7 +649,12 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               border: '1px solid rgba(56, 189, 248, 0.35)',
               background: 'linear-gradient(175deg, #0e192b 0%, #080f1a 100%)',
               boxShadow: '0 25px 65px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.25)',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              color: '#F8FAFC',
+              ['--text-primary' as any]: '#FFFFFF',
+              ['--text-secondary' as any]: '#E2E8F0',
+              ['--text-muted' as any]: '#94A3B8',
+              ['--text-dim' as any]: '#CBD5E1'
             }}
           >
             {/* Header (Pinned) */}
@@ -662,7 +680,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
                     Carbon Calculation Transparency & Mathematical Derivations
                   </h3>
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
+                  <p style={{ fontSize: '0.74rem', color: '#94A3B8', margin: '3px 0 0 0' }}>
                     Real-time mathematical equations evaluated dynamically from sensor and simulation events.
                   </p>
                 </div>
@@ -742,10 +760,10 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                           padding: '0.45rem 0.75rem',
                           fontFamily: 'monospace',
                           fontSize: '0.72rem',
-                          color: 'var(--text-dim)',
+                          color: '#E2E8F0',
                           border: '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
-                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Formula: </span>
+                          <span style={{ color: '#94A3B8', fontWeight: 700 }}>Formula: </span>
                           {step.formula}
                         </div>
                         <div style={{
@@ -761,7 +779,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                           {step.substitution}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '2px' }}>
-                          <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>Evaluated Result:</span>
+                          <span style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Evaluated Result:</span>
                           <span style={{
                             fontSize: '0.88rem',
                             fontWeight: 800,
@@ -829,10 +847,10 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                           padding: '0.45rem 0.75rem',
                           fontFamily: 'monospace',
                           fontSize: '0.72rem',
-                          color: 'var(--text-dim)',
+                          color: '#E2E8F0',
                           border: '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
-                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Formula: </span>
+                          <span style={{ color: '#94A3B8', fontWeight: 700 }}>Formula: </span>
                           {step.formula}
                         </div>
                         <div style={{
@@ -848,7 +866,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                           {step.substitution}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '2px' }}>
-                          <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>Evaluated Result:</span>
+                          <span style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Evaluated Result:</span>
                           <span style={{
                             fontSize: '0.88rem',
                             fontWeight: 800,
@@ -916,10 +934,10 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                           padding: '0.45rem 0.75rem',
                           fontFamily: 'monospace',
                           fontSize: '0.72rem',
-                          color: 'var(--text-dim)',
+                          color: '#E2E8F0',
                           border: '1px solid rgba(255, 255, 255, 0.05)'
                         }}>
-                          <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Formula: </span>
+                          <span style={{ color: '#94A3B8', fontWeight: 700 }}>Formula: </span>
                           {step.formula}
                         </div>
                         <div style={{
@@ -935,7 +953,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                           {step.substitution}
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '2px' }}>
-                          <span style={{ fontSize: '0.70rem', color: 'var(--text-secondary)' }}>Evaluated Result:</span>
+                          <span style={{ fontSize: '0.72rem', color: '#CBD5E1' }}>Evaluated Result:</span>
                           <span style={{
                             fontSize: '0.88rem',
                             fontWeight: 800,
@@ -960,7 +978,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               justifyContent: 'space-between',
               background: 'rgba(14, 25, 43, 0.98)'
             }}>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>
+              <span style={{ fontSize: '0.70rem', color: '#94A3B8' }}>
                 Complies with agricultural GHG lifecycle accounting standards & Section 22 transparency.
               </span>
               <button
@@ -1004,6 +1022,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            className="env-impact-modal"
             style={{
               width: '100%',
               maxWidth: '680px',
@@ -1015,7 +1034,12 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               border: '1px solid rgba(245, 158, 11, 0.4)',
               background: 'linear-gradient(175deg, #111a28 0%, #0a1019 100%)',
               boxShadow: '0 25px 65px rgba(0, 0, 0, 0.85), 0 0 35px rgba(245, 158, 11, 0.2)',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              color: '#F8FAFC',
+              ['--text-primary' as any]: '#FFFFFF',
+              ['--text-secondary' as any]: '#E2E8F0',
+              ['--text-muted' as any]: '#94A3B8',
+              ['--text-dim' as any]: '#CBD5E1'
             }}
           >
             {/* Header (Pinned) */}
@@ -1041,7 +1065,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
                     Environmental Model Assumptions & Emission Factors
                   </h3>
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
+                  <p style={{ fontSize: '0.74rem', color: '#94A3B8', margin: '3px 0 0 0' }}>
                     Configure baseline intensity, robot electrical power, and LCA carbon factors.
                   </p>
                 </div>
@@ -1069,7 +1093,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.85rem' }}>
                 {/* Field Area */}
                 <div>
-                  <label style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
                     Total Field Area (m²)
                   </label>
                   <input
@@ -1092,7 +1116,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
                 {/* Micro-canopy Target Area */}
                 <div>
-                  <label style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
                     Plant Micro-Canopy Target Area (m²)
                   </label>
                   <input
@@ -1115,7 +1139,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
                 {/* Baseline Broadcast Application Rate */}
                 <div>
-                  <label style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
                     Baseline Application Rate (mL / m²)
                   </label>
                   <input
@@ -1139,7 +1163,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
                 {/* Prototype Pump Flow Rate */}
                 <div>
-                  <label style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
                     Pump Prototype Flow Rate (mL / sec)
                   </label>
                   <input
@@ -1162,7 +1186,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
                 {/* Average Robot Power */}
                 <div>
-                  <label style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
                     Robot Electrical Power (Watts)
                   </label>
                   <input
@@ -1185,7 +1209,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
                 {/* Chemical Carbon Emission Factor */}
                 <div>
-                  <label style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
                     Chemical Factor (kg CO2e / mL)
                   </label>
                   <input
@@ -1209,7 +1233,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
 
                 {/* Electricity Emission Factor */}
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '0.70rem', color: 'var(--text-dim)', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#CBD5E1', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
                     Electricity Grid Factor (kg CO2e / kWh)
                   </label>
                   <input
@@ -1302,6 +1326,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            className="env-impact-modal"
             style={{
               width: '100%',
               maxWidth: '740px',
@@ -1313,7 +1338,12 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               border: '1px solid rgba(16, 185, 129, 0.4)',
               background: 'linear-gradient(175deg, #0d1e20 0%, #081214 100%)',
               boxShadow: '0 25px 65px rgba(0, 0, 0, 0.85), 0 0 35px rgba(16, 185, 129, 0.2)',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              color: '#F8FAFC',
+              ['--text-primary' as any]: '#FFFFFF',
+              ['--text-secondary' as any]: '#E2E8F0',
+              ['--text-muted' as any]: '#94A3B8',
+              ['--text-dim' as any]: '#CBD5E1'
             }}
           >
             {/* Header (Pinned) */}
@@ -1339,7 +1369,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', margin: 0 }}>
                     Chronological Environmental Event Audit Trail
                   </h3>
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '3px 0 0 0' }}>
+                  <p style={{ fontSize: '0.74rem', color: '#94A3B8', margin: '3px 0 0 0' }}>
                     Structured real-time event log for treatment actuation, runtime, and footprint accounting.
                   </p>
                 </div>
@@ -1366,7 +1396,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
               gap: '0.5rem'
             }}>
               {carbonCalculator.getEventLogs().length === 0 ? (
-                <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                <div style={{ padding: '2.5rem', textAlign: 'center', color: '#94A3B8', fontSize: '0.78rem' }}>
                   No environmental events recorded yet. Drive or spray targets to generate audit entries.
                 </div>
               ) : (
@@ -1394,7 +1424,7 @@ export const EnvironmentalImpactCard: React.FC<EnvironmentalImpactCardProps> = (
                       </span>
                       <span style={{ color: '#fff' }}>{log.message}</span>
                     </div>
-                    <span style={{ color: 'var(--text-dim)', fontSize: '0.66rem', fontFamily: 'monospace' }}>
+                    <span style={{ color: '#94A3B8', fontSize: '0.66rem', fontFamily: 'monospace' }}>
                       {log.timestamp}
                     </span>
                   </div>
